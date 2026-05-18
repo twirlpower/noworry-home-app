@@ -38,27 +38,16 @@ export function AuthProvider({ children }) {
   }
 
   async function signUp(email, password, firstName, lastName) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // The persons row is created by the on_auth_user_created trigger from
+    // user_metadata (see docs/rls_policies_v1.sql). loadPerson() picks it up
+    // once the auth session is established.
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: { data: { first_name: firstName, last_name: lastName } },
     })
     if (authError) return { error: authError }
-
-    const { data: personData, error: personError } = await supabase
-      .from('persons')
-      .insert({
-        auth_id: authData.user.id,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        auth_status: 'active',
-      })
-      .select()
-      .single()
-
-    if (personError) return { error: personError }
-    setPerson(personData)
-    return { data: personData }
+    return {}
   }
 
   async function signIn(email, password) {

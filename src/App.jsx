@@ -8,6 +8,7 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
+import HomeProfile from './pages/HomeProfile'
 
 export default function App() {
   return (
@@ -31,7 +32,7 @@ export default function App() {
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="home-profile" element={<Placeholder title="My Home" />} />
+              <Route path="home-profile" element={<HomeProfile />} />
               <Route path="maintenance" element={<Placeholder title="Maintenance Calendar" />} />
               <Route path="safety" element={<Placeholder title="Safety Checklist" />} />
               <Route path="circle" element={<Placeholder title="My Circle" />} />

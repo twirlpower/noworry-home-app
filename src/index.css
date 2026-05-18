@@ -442,6 +442,118 @@ select.form-input {
 .health-fair { color: var(--gold); }
 .health-poor { color: var(--red); }
 
+/* ── HOME PROFILE ── */
+.profile-card {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.profile-card h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.9rem;
+}
+
+.profile-address {
+  font-size: 1rem;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--clay);
+}
+
+.detail-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--deep);
+}
+
+.profile-notes {
+  margin-top: 1.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--cool);
+}
+
+.profile-notes p {
+  margin-top: 0.3rem;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.profile-section {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.profile-section h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 1rem;
+}
+
+.form-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+}
+
+.form-checkbox input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--teal);
+}
+
+textarea.form-input {
+  resize: vertical;
+  font-family: var(--font);
+  line-height: 1.5;
+}
+
+.btn-secondary {
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--teal);
+  background: #E1F5EE;
+  border: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--muted-teal);
+  color: var(--deep);
+}
+
 /* ── LOADING ── */
 .loading-screen {
   display: flex;
@@ -485,4 +597,5 @@ select.form-input {
   .app-shell { flex-direction: column; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .detail-grid { grid-template-columns: 1fr 1fr; }
 }

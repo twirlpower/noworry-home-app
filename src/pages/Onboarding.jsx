@@ -35,105 +35,40 @@ export default function Onboarding() {
     setError('')
     setLoading(true)
 
-    try {
-      // 1. Create the home
-      const { data: home, error: homeError } = await supabase
-        .from('homes')
-        .insert({
-          address_line1: address,
-          city,
-          state,
-          zip,
-          year_built: yearBuilt ? parseInt(yearBuilt) : null,
-          square_feet: sqft ? parseInt(sqft) : null,
-          bedrooms: bedrooms ? parseInt(bedrooms) : null,
-          bathrooms: bathrooms ? parseFloat(bathrooms) : null,
-        })
-        .select()
-        .single()
+    const circleName = setupType === 'other'
+      ? `${ownerFirst}'s Home Circle`
+      : `${person.first_name}'s Home Circle`
 
-      if (homeError) throw homeError
+    // Single atomic RPC — creates home, circle, link, and memberships in one
+    // transaction (SECURITY DEFINER, so it isn't blocked by the RLS bootstrap
+    // chicken-and-egg). See docs/rls_policies_v1.sql.
+    const { error: rpcError } = await supabase.rpc('setup_home_circle', {
+      p_setup_type: setupType,
+      p_circle_name: circleName,
+      p_home: {
+        address_line1: address,
+        address_line2: '',
+        city,
+        state,
+        zip,
+        year_built: yearBuilt,
+        square_feet: sqft,
+        bedrooms,
+        bathrooms,
+      },
+      p_owner_first: setupType === 'other' ? ownerFirst : null,
+      p_owner_last: setupType === 'other' ? ownerLast : null,
+      p_owner_relationship: setupType === 'other' ? ownerRelationship : null,
+    })
 
-      // 2. Create proxy Home Owner if setting up for someone else
-      let homeOwnerId = person.id
-      if (setupType === 'other') {
-        const { data: owner, error: ownerError } = await supabase
-          .from('persons')
-          .insert({
-            first_name: ownerFirst,
-            last_name: ownerLast,
-            auth_status: 'proxy',
-            created_by: person.id,
-          })
-          .select()
-          .single()
-
-        if (ownerError) throw ownerError
-        homeOwnerId = owner.id
-      }
-
-      // 3. Create the family circle
-      const circleName = setupType === 'other'
-        ? `${ownerFirst}'s Home Circle`
-        : `${person.first_name}'s Home Circle`
-
-      const { data: circle, error: circleError } = await supabase
-        .from('family_circles')
-        .insert({
-          name: circleName,
-          subscription_tier: 'home_base',
-        })
-        .select()
-        .single()
-
-      if (circleError) throw circleError
-
-      // 4. Add the home to the circle
-      await supabase.from('circle_homes').insert({
-        circle_id: circle.id,
-        home_id: home.id,
-        is_primary: true,
-      })
-
-      // 5. Add memberships
-      if (setupType === 'self') {
-        // Self: person is Home Owner + Circle Manager
-        await supabase.from('circle_memberships').insert({
-          person_id: person.id,
-          circle_id: circle.id,
-          role: 'home_owner',
-          status: 'active',
-          joined_at: new Date().toISOString(),
-        })
-      } else {
-        // Other: proxy is Home Owner, person is Circle Manager + Care Partner
-        await supabase.from('circle_memberships').insert({
-          person_id: homeOwnerId,
-          circle_id: circle.id,
-          role: 'home_owner',
-          status: 'active',
-          relationship: 'homeowner',
-          joined_at: new Date().toISOString(),
-        })
-        await supabase.from('circle_memberships').insert({
-          person_id: person.id,
-          circle_id: circle.id,
-          role: 'circle_manager',
-          status: 'active',
-          relationship: ownerRelationship,
-          invited_by: person.id,
-          joined_at: new Date().toISOString(),
-        })
-      }
-
-      // 6. Reload circles and navigate to dashboard
-      await reloadCircles()
-      navigate('/dashboard')
-
-    } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.')
+    if (rpcError) {
+      setError(rpcError.message || 'Something went wrong. Please try again.')
       setLoading(false)
+      return
     }
+
+    await reloadCircles()
+    navigate('/dashboard')
   }
 
   // Step: Home Owner info (only for "setting up for someone else")

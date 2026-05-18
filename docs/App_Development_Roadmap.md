@@ -18,7 +18,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - **Circle isolation**: absolute privacy between circles, no data bridge
 - **Permanent home record**: Carfax-for-homes — persists across ownership
 - **Stack**: Supabase (PostgreSQL + Auth + Storage) → Vercel (hosting) → GitHub (code)
-- **Schema**: 19 tables, RLS enabled, all enums use customer-facing names
+- **Schema**: 20 tables (incl. family_group_circles join table), RLS enabled, all enums use customer-facing names
+- **RLS bootstrap pattern**: onboarding runs through a `SECURITY DEFINER` RPC (`setup_home_circle`) for atomicity and to bypass the RLS chicken-and-egg; the `persons` row is created by an `auth.users` trigger (`handle_new_user`) from signup metadata, not a client insert
 
 ---
 
@@ -30,11 +31,11 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ✅ Vercel project created
 - ✅ Family Graph Spec v1.0 complete
 - ✅ SQL schema v1.0 written (19 tables)
-- ⬜ SQL schema deployed to Supabase
+- ✅ SQL schema deployed to Supabase (20 tables — roadmap's "19" undercounts the join table)
 - ⬜ Supabase Auth configured
 - ⬜ Supabase env vars added to Vercel
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed
+- ⬜ RLS policies written and deployed (v1 written for the 5 bootstrap tables per the Family Graph permission matrix — `docs/rls_policies_v1.sql`; deploy pending; 15 tables still deny-all, to be added incrementally)
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
@@ -71,7 +72,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 ## Phase 1: Home Base (Free Tier)
 
 ### Pillar 1 — The Home
-- ⬜ Home profile view and edit
+- ✅ Home profile view and edit
 - ⬜ Home systems list (add, edit, remove systems)
 - ⬜ Maintenance calendar (auto-generated from system data + templates)
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
@@ -154,3 +155,4 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - Notification delivery: email-first, then SMS, then push?
 - Maintenance template seed data: how many templates for Colorado launch?
 - Admin panel: separate app or role-gated views within the same app?
+- Email confirmation: on or off for launch? If on, signup must land on a "check your email" screen instead of `/onboarding` (protected route bounces with no session until confirmed).
