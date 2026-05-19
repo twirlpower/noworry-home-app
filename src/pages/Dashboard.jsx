@@ -94,7 +94,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-screen">
+        <div className="loading-screen" role="status">
           <div className="loading-spinner" />
           <p>Loading dashboard…</p>
         </div>

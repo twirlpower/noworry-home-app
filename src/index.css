@@ -9,11 +9,15 @@
   --off-white: #F7F4F2;
   --cool: #D9E8ED;
   --muted-teal: #8ED9D2;
-  --clay: #B89C8C;
+  --clay: #B89C8C;                 /* decorative only (borders/icons) */
+  --muted: #6A5A52;                /* secondary TEXT — ≥4.5:1 on white/off-white */
   --slate: #3B4D63;
   --text: #513C3C;
   --white: #FFFFFF;
   --red: #D85A30;
+  /* Accessible TEXT variants of accent colors for small text on tints */
+  --amber-text: #8A5600;
+  --red-text: #B23A16;
   --radius: 14px;
   --radius-sm: 8px;
   --font: 'Source Sans 3', 'Source Sans Pro', -apple-system, sans-serif;
@@ -35,6 +39,60 @@ body {
   color: var(--text);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── ACCESSIBILITY PRIMITIVES ── */
+/* Visible keyboard focus on every interactive element (WCAG 2.4.7). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+/* Override the input rule that removed the outline. */
+.form-input:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 1px;
+  border-color: var(--blue);
+}
+
+/* Screen-reader-only text. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip-to-content link — visible on focus. */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  background: var(--deep);
+  color: var(--white);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 /* ── AUTH PAGES ── */
@@ -75,14 +133,14 @@ body {
 
 .auth-subtitle {
   font-size: 1rem;
-  color: var(--clay);
+  color: var(--muted);
   margin-bottom: 1.8rem;
   line-height: 1.6;
 }
 
 .auth-error {
   background: #FEF2F2;
-  color: var(--red);
+  color: var(--red-text);
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
@@ -103,12 +161,12 @@ body {
 }
 
 .auth-links a:hover {
-  color: var(--teal);
+  color: var(--deep);
 }
 
 .auth-divider {
   margin: 0 0.5rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 /* ── PATH CARDS (onboarding) ── */
@@ -159,7 +217,7 @@ body {
 .path-card-desc {
   display: block;
   font-size: 0.85rem;
-  color: var(--clay);
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -192,7 +250,7 @@ body {
 }
 
 .form-input::placeholder {
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .form-row {
@@ -246,7 +304,7 @@ select.form-input {
   width: 100%;
   padding: 0.6rem;
   background: none;
-  color: var(--clay);
+  color: var(--muted);
   font-family: var(--font);
   font-size: 0.9rem;
   font-weight: 600;
@@ -334,7 +392,7 @@ select.form-input {
 
 .nav-link.active {
   background: #E1F5EE;
-  color: var(--teal);
+  color: var(--deep);
 }
 
 .app-nav-user {
@@ -355,7 +413,7 @@ select.form-input {
   font-family: var(--font);
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--clay);
+  color: var(--muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -364,7 +422,7 @@ select.form-input {
 }
 
 .btn-sign-out:hover {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .app-main {
@@ -393,14 +451,14 @@ select.form-input {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: capitalize;
-  color: var(--teal);
+  color: var(--deep);
   background: #E1F5EE;
   padding: 0.2rem 0.7rem;
   border-radius: 20px;
 }
 
 .page-placeholder {
-  color: var(--clay);
+  color: var(--muted);
   font-size: 1rem;
   margin-top: 0.5rem;
 }
@@ -427,7 +485,7 @@ select.form-input {
 }
 
 .dash-empty {
-  color: var(--clay);
+  color: var(--muted);
   font-size: 0.9rem;
   font-style: italic;
 }
@@ -454,7 +512,7 @@ select.form-input {
 
 .dash-list-meta {
   font-size: 0.82rem;
-  color: var(--clay);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
@@ -464,9 +522,9 @@ select.form-input {
   margin-bottom: 0.3rem;
 }
 
-.health-good { color: var(--teal); }
-.health-fair { color: var(--gold); }
-.health-poor { color: var(--red); }
+.health-good { color: var(--deep); }
+.health-fair { color: var(--amber-text); }
+.health-poor { color: var(--red-text); }
 
 /* ── HOME HEALTH WIDGET ── */
 .health-widget {
@@ -498,7 +556,7 @@ select.form-input {
 
 .health-sub {
   font-size: 0.85rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .health-factors {
@@ -531,7 +589,7 @@ select.form-input {
 }
 
 .health-factor-detail {
-  color: var(--clay);
+  color: var(--muted);
   margin-left: auto;
   text-align: right;
 }
@@ -575,7 +633,7 @@ select.form-input {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .detail-value {
@@ -634,7 +692,7 @@ textarea.form-input {
   font-family: var(--font);
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--teal);
+  color: var(--deep);
   background: #E1F5EE;
   border: none;
   padding: 0.5rem 1.1rem;
@@ -713,15 +771,15 @@ textarea.form-input {
 }
 
 .btn-link:hover {
-  color: var(--teal);
+  color: var(--deep);
 }
 
 .btn-link-danger {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .btn-link-danger:hover {
-  color: var(--red);
+  color: var(--red-text);
   text-decoration: underline;
 }
 
@@ -740,7 +798,7 @@ textarea.form-input {
 
 .system-meta {
   font-size: 0.85rem;
-  color: var(--clay);
+  color: var(--muted);
   text-transform: capitalize;
 }
 
@@ -759,7 +817,7 @@ textarea.form-input {
 
 .safety-count {
   font-size: 0.95rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .safety-bar {
@@ -775,9 +833,9 @@ textarea.form-input {
   transition: width 0.3s;
 }
 
-.safety-good { color: var(--teal); }
-.safety-fair { color: var(--gold); }
-.safety-poor { color: var(--red); }
+.safety-good { color: var(--deep); }
+.safety-fair { color: var(--amber-text); }
+.safety-poor { color: var(--red-text); }
 .safety-bar-fill.safety-good { background: var(--teal); }
 .safety-bar-fill.safety-fair { background: var(--gold); }
 .safety-bar-fill.safety-poor { background: var(--red); }
@@ -851,7 +909,7 @@ textarea.form-input {
 
 .maint-desc {
   font-size: 0.85rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .maint-due {
@@ -871,13 +929,13 @@ textarea.form-input {
   border-radius: 20px;
 }
 
-.due-overdue { color: var(--red); background: #FEF2F2; }
-.due-soon { color: var(--gold); background: #FBF3E3; }
-.due-later { color: var(--teal); background: #E1F5EE; }
+.due-overdue { color: var(--red-text); background: #FEF2F2; }
+.due-soon { color: var(--amber-text); background: #FBF3E3; }
+.due-later { color: var(--deep); background: #E1F5EE; }
 
 .maint-date {
   font-size: 0.8rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 /* ── ADDRESS AUTOCOMPLETE (onboarding) ── */
@@ -925,7 +983,7 @@ textarea.form-input {
 
 .seed-meta {
   font-size: 0.82rem;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 /* ── CIRCLE / MEMBERS ── */
@@ -972,7 +1030,7 @@ textarea.form-input {
 
 .member-meta {
   font-size: 0.85rem;
-  color: var(--clay);
+  color: var(--muted);
   text-transform: capitalize;
 }
 
@@ -985,9 +1043,9 @@ textarea.form-input {
   border-radius: 20px;
   flex-shrink: 0;
 }
-.status-active { color: var(--teal); background: #E1F5EE; }
-.status-invited { color: var(--gold); background: #FBF3E3; }
-.status-removed, .status-left { color: var(--clay); background: var(--cool); }
+.status-active { color: var(--deep); background: #E1F5EE; }
+.status-invited { color: var(--amber-text); background: #FBF3E3; }
+.status-removed, .status-left { color: var(--muted); background: var(--cool); }
 
 @media (max-width: 768px) {
   .member-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
@@ -1000,7 +1058,7 @@ textarea.form-input {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  color: var(--clay);
+  color: var(--muted);
 }
 
 .loading-spinner {

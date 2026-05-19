@@ -134,7 +134,7 @@ export default function Circle() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-screen">
+        <div className="loading-screen" role="status">
           <div className="loading-spinner" />
           <p>Loading circle…</p>
         </div>
@@ -153,8 +153,8 @@ export default function Circle() {
         )}
       </div>
 
-      {error && <div className="auth-error">{error}</div>}
-      {notice && <div className="auth-notice">{notice}</div>}
+      {error && <div className="auth-error" role="alert">{error}</div>}
+      {notice && <div className="auth-notice" role="status">{notice}</div>}
 
       {showInvite && (
         <form onSubmit={handleInvite} className="profile-section">

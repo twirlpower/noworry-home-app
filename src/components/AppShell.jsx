@@ -14,14 +14,17 @@ export default function AppShell() {
 
   return (
     <div className="app-shell">
-      <nav className="app-nav">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <nav className="app-nav" aria-label="Primary">
         <div className="app-nav-brand">
           <img src="/images/logo.png" alt="NoWorry Home" className="app-nav-logo" />
         </div>
 
         {circles.length > 1 && (
           <div className="circle-switcher">
+            <label htmlFor="circle-switcher" className="sr-only">Switch home circle</label>
             <select
+              id="circle-switcher"
               value={activeCircle?.id || ''}
               onChange={(e) => switchCircle(e.target.value)}
               className="circle-select"
@@ -68,7 +71,7 @@ export default function AppShell() {
         </div>
       </nav>
 
-      <main className="app-main">
+      <main className="app-main" id="main-content">
         <Outlet />
       </main>
     </div>

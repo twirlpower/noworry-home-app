@@ -105,7 +105,7 @@ export default function Maintenance() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-screen">
+        <div className="loading-screen" role="status">
           <div className="loading-spinner" />
           <p>Loading maintenance…</p>
         </div>
@@ -124,7 +124,7 @@ export default function Maintenance() {
         )}
       </div>
 
-      {error && <div className="auth-error">{error}</div>}
+      {error && <div className="auth-error" role="alert">{error}</div>}
 
       {items.length === 0 ? (
         <div className="profile-card">

@@ -172,7 +172,7 @@ export default function Onboarding() {
             They don't need to create an account.
           </p>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && <div className="auth-error" role="alert">{error}</div>}
 
           <div className="form-row">
             <label className="form-label">
@@ -227,9 +227,9 @@ export default function Onboarding() {
             : 'Start typing your address — we may already have your home on file.'}
         </p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
         {selectedSeed && (
-          <div className="auth-notice">
+          <div className="auth-notice" role="status">
             ✓ Matched from county records. Pre-filled below — please confirm.
           </div>
         )}

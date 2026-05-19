@@ -31,7 +31,7 @@ export default function Login() {
         <h1>Welcome back</h1>
         <p className="auth-subtitle">Sign in to your Home Circle</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <label className="form-label">

@@ -283,7 +283,7 @@ export default function HomeProfile() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-screen">
+        <div className="loading-screen" role="status">
           <div className="loading-spinner" />
           <p>Loading home profile…</p>
         </div>
@@ -298,7 +298,7 @@ export default function HomeProfile() {
         <p className="page-placeholder">
           No home is linked to this circle yet.
         </p>
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
       </div>
     )
   }
@@ -310,7 +310,7 @@ export default function HomeProfile() {
           <h1>Edit Home Profile</h1>
         </div>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         <form onSubmit={handleSave} className="profile-form">
           <div className="profile-section">
@@ -460,7 +460,7 @@ export default function HomeProfile() {
             <h4 className="form-subhead">
               {sysEditId === 'new' ? 'Add a system' : 'Edit system'}
             </h4>
-            {sysError && <div className="auth-error">{sysError}</div>}
+            {sysError && <div className="auth-error" role="alert">{sysError}</div>}
             <div className="form-row">
               <label className="form-label">
                 System type

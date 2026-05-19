@@ -48,7 +48,7 @@ export default function ForgotPassword() {
           Enter your email and we'll send you a link to reset your password.
         </p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <label className="form-label">

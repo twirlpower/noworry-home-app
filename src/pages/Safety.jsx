@@ -104,7 +104,7 @@ export default function Safety() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-screen">
+        <div className="loading-screen" role="status">
           <div className="loading-spinner" />
           <p>Loading safety checklist…</p>
         </div>
@@ -118,14 +118,21 @@ export default function Safety() {
         <h1>Safety Checklist</h1>
       </div>
 
-      {error && <div className="auth-error">{error}</div>}
+      {error && <div className="auth-error" role="alert">{error}</div>}
 
       <div className="profile-card">
         <div className="safety-score">
           <span className={`safety-pct safety-${tone}`}>{pct}%</span>
           <span className="safety-count">{done} of {total} complete</span>
         </div>
-        <div className="safety-bar">
+        <div
+          className="safety-bar"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Safety checklist ${pct}% complete, ${done} of ${total} items`}
+        >
           <div className={`safety-bar-fill safety-${tone}`} style={{ width: `${pct}%` }} />
         </div>
       </div>

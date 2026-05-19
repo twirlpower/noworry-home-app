@@ -91,7 +91,7 @@ export default function Signup() {
             : 'You\'ll be the Circle Manager for your family member\'s home.'}
         </p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         <form onSubmit={handleCreateAccount}>
           <div className="form-row">
