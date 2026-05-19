@@ -880,11 +880,6 @@ textarea.form-input {
   color: var(--clay);
 }
 
-@media (max-width: 768px) {
-  .maint-row { flex-direction: column; align-items: flex-start; }
-  .maint-due { align-items: flex-start; }
-}
-
 /* ── LOADING ── */
 .loading-screen {
   display: flex;
@@ -909,24 +904,78 @@ textarea.form-input {
   to { transform: rotate(360deg); }
 }
 
-/* ── RESPONSIVE ── */
+/* ── RESPONSIVE (senior-first: big targets, readable text) ── */
 @media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
+
   .app-nav {
     width: 100%;
     height: auto;
     position: relative;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     padding: 0.8rem;
-    gap: 0.5rem;
+    gap: 0.6rem;
   }
 
-  .app-nav-brand { padding: 0 0.5rem; border: none; margin: 0; }
-  .app-nav-links { flex-direction: row; flex-wrap: wrap; padding: 0; gap: 0.3rem; }
-  .app-nav-user { border: none; padding: 0 0.5rem; }
-  .app-main { margin-left: 0; padding: 1.5rem; }
-  .app-shell { flex-direction: column; }
+  .app-nav-brand { padding: 0 0.5rem 0.6rem; border: none; margin: 0; }
+
+  /* Nav links: horizontal scroll row of large, easily-tapped chips. */
+  .app-nav-links {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0;
+    gap: 0.4rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-link {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    font-size: 1rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .app-nav-user {
+    border: none;
+    padding: 0 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-nav-user .user-name { margin-bottom: 0; }
+
+  .app-main { margin-left: 0; padding: 1.4rem 1.1rem; }
+
   .dashboard-grid { grid-template-columns: 1fr; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Headers and rows that pair a title with an action: stack, don't overflow. */
+  .page-header,
+  .card-header { flex-wrap: wrap; gap: 0.6rem; }
+
+  .maint-row { flex-direction: column; align-items: flex-start; }
+  .maint-due { align-items: flex-start; }
+  .system-row { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+
+  /* Bigger tap targets for inline actions. */
+  .btn-secondary { min-height: 44px; }
+  .btn-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  html { font-size: 17px; }
+  .app-main { padding: 1.1rem 0.9rem; }
+  .auth-card { padding: 1.6rem 1.2rem; }
+  .detail-grid { grid-template-columns: 1fr; }
+  .page h1 { font-size: 1.4rem; }
+  .health-number { font-size: 2.2rem; }
+  .safety-pct { font-size: 1.7rem; }
 }

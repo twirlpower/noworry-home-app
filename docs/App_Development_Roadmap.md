@@ -84,7 +84,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 ### Core Platform
 - ⬜ Dashboard: home health score + upcoming maintenance + recent activity — health score + upcoming maintenance + open tasks wired to real data; recent activity placeholder (audit_log RLS not yet deployed)
 - ⬜ Settings: profile, notification preferences, circle management
-- ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav)
+- ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav) — pass done: nav scroll-row with 48px targets, stacked page/card headers + system/maint rows, 44px inline actions, 480px breakpoint; on-device verification still TODO
 - ⬜ Accessibility audit (WCAG 2.1 AA minimum)
 
 ---
