@@ -78,6 +78,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
 - ⬜ Home health score (simple traffic-light dashboard)
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
+- ⬜ Asset warranty tracking — link warranty documents to home systems, track expiration dates, alert before lapse
+- ⬜ Warranty document upload — tied to home systems, stored in Supabase storage
 
 ### Core Platform
 - ⬜ Dashboard: home health score + upcoming maintenance + recent activity
