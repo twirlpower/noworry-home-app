@@ -35,7 +35,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Supabase Auth configured
 - ⬜ Supabase env vars added to Vercel
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed (v1 deployed & smoke-tested for the 5 bootstrap tables — `docs/rls_policies_v1.sql`; v2 written for home_systems + scheduled_maintenance — `docs/rls_policies_v2.sql`, deploy pending; 13 tables still deny-all)
+- ⬜ RLS policies written and deployed (v1 + v2 deployed & smoke-tested — 7 tables: 5 bootstrap + home_systems + scheduled_maintenance — `docs/rls_policies_v1.sql`, `docs/rls_policies_v2.sql`; 13 tables still deny-all)
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
@@ -73,8 +73,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Pillar 1 — The Home
 - ✅ Home profile view and edit
-- ⬜ Home systems list (add, edit, remove systems) — list + empty state shown on Home Profile; add/edit/remove + RLS still TODO
-- ⬜ Maintenance calendar (auto-generated from system data + templates) — view shipped with due-date buckets + empty state; auto-generation + RLS still TODO
+- ⬜ Home systems list (add, edit, remove systems) — list + Add System form live & smoke-tested (RLS v2 deployed); edit/remove still TODO
+- ⬜ Maintenance calendar (auto-generated from system data + templates) — view + RLS live & smoke-tested; auto-generation from templates still TODO
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
 - ⬜ Home health score (simple traffic-light dashboard)
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
