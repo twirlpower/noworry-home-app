@@ -210,6 +210,18 @@ console.log('11. home_seeds search (onboarding autocomplete)')
   else ok(`home_seeds searchable (${seeds.length} matches, e.g. "${seeds[0].address_line1}")`)
 }
 
+// 12. Migration 006 — seasonal Colorado templates seeded.
+console.log('12. seasonal maintenance templates (migration 006)')
+{
+  const { data: tpl, error: tErr } = await supabase
+    .from('maintenance_templates')
+    .select('title')
+    .in('title', ['Winterize sprinkler system', 'Clean dryer vent', 'Snow removal prep'])
+  if (tErr) bad(`maintenance_templates read failed: ${tErr.code} ${tErr.message}`)
+  else if ((tpl?.length ?? 0) >= 3) ok(`006 templates present (${tpl.length}/3 sampled)`)
+  else bad(`006 not deployed — run migrations/006 (found ${tpl?.length ?? 0}/3 new templates)`)
+}
+
 console.log(
   process.exitCode
     ? '\n✗ SMOKE TEST FAILED — see above.'
