@@ -802,6 +802,21 @@ textarea.form-input {
   text-transform: capitalize;
 }
 
+/* Task description: free-form sentence, so opt out of the meta capitalize
+   transform and give it a small top gap from the meta line above. */
+.task-desc {
+  margin-top: 0.25rem;
+  text-transform: none;
+  font-style: italic;
+}
+
+/* Overdue label inside a task meta line. Color (accessible variant) plus
+   weight — never color alone (senior-first / WCAG). */
+.task-due-overdue {
+  color: var(--red-text);
+  font-weight: 700;
+}
+
 /* ── SAFETY CHECKLIST ── */
 .safety-score {
   display: flex;

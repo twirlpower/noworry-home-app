@@ -101,7 +101,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 ### Pillar 3 — The Family
 - ⬜ Family member invitation flow (email + role assignment)
 - ⬜ Role management (Circle Manager can change roles)
-- ⬜ Task management (create, assign, complete, comment)
+- ✅ Task management (create, assign, complete)
+- ⬜ Task comments and activity feed
 - ⬜ Notes and family updates feed
 - ⬜ Permission visibility ("you can see X, you cannot see Y")
 - ⬜ Family dashboard (who's active, what's pending)
