@@ -86,8 +86,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 > *Your plans organized, your family coordinated.*
 
 ### Pillar 2 — The Plan
-- ⬜ Document vault (upload, organize, tag by type)
-- ⬜ Document checklist (will, POA, insurance, deed — shows gaps)
+- ✅ Document vault (upload, organize, tag by type)
+- ✅ Document checklist (will, POA, insurance, deed — shows gaps)
 - ⬜ Emergency contacts list (ordered by priority)
 - ⬜ Financial access planning (who has access to what)
 - ⬜ Wishes and preferences

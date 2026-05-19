@@ -13,6 +13,7 @@ import Maintenance from './pages/Maintenance'
 import Safety from './pages/Safety'
 import Circle from './pages/Circle'
 import Tasks from './pages/Tasks'
+import Documents from './pages/Documents'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
               <Route path="home-profile" element={<HomeProfile />} />
               <Route path="maintenance" element={<Maintenance />} />
               <Route path="safety" element={<Safety />} />
+              <Route path="documents" element={<Documents />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="circle" element={<Circle />} />
               <Route path="settings" element={<Settings />} />
