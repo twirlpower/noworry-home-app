@@ -1,6 +1,6 @@
 # NoWorry Home — App Development Roadmap
 
-Updated: May 18, 2026
+Updated: May 19, 2026 · v1.2
 
 ---
 
@@ -30,11 +30,11 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ✅ Vercel project created
 - ✅ Family Graph Spec v1.0 complete
 - ✅ SQL schema v1.0 written (19 tables)
-- ⬜ SQL schema deployed to Supabase
-- ⬜ Supabase Auth configured
-- ⬜ Supabase env vars added to Vercel
+- ✅ SQL schema deployed to Supabase
+- ✅ Supabase Auth configured
+- ✅ Supabase env vars added to Vercel
+- ✅ RLS policies written and deployed (rls_v1, rls_v2, 007 notif prefs, 009 tasks)
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
@@ -45,49 +45,43 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Contact form
 - ⬜ About page
 
----
-
-## Active Sprint: App Shell + Onboarding
-
-### App Shell
-- ⬜ Project scaffolding (HTML/CSS/JS or framework decision)
-- ⬜ App layout: nav, sidebar/circle switcher, main content area
-- ⬜ Supabase client initialization
-- ⬜ Auth: signup, login, logout, password reset
-- ⬜ Auth: email verification flow
-- ⬜ Protected route logic (redirect to login if not authenticated)
-- ⬜ Circle switcher UI (for multi-circle users)
-
-### Onboarding Flow
-- ⬜ First screen: "Setting up for myself" vs "Setting up for someone else"
-- ⬜ Path A: Self-setup → create account → create home profile → auto-create circle
-- ⬜ Path B: Setting up for someone else → create account → create proxy Home Owner → create home profile → auto-create circle
-- ⬜ Home profile form: address, year built, square footage, systems
-- ⬜ Invite family members flow (optional, skippable)
+### App Shell + Onboarding
+- ✅ Project scaffolding (React + Vite + React Router)
+- ✅ App layout: nav, circle switcher, main content area
+- ✅ Supabase client initialization
+- ✅ Auth: signup, login, logout, password reset
+- ✅ Auth: email verification flow
+- ✅ Protected route logic (redirect to login if not authenticated)
+- ✅ Circle switcher UI (for multi-circle users)
+- ✅ First screen: "Setting up for myself" vs "Setting up for someone else"
+- ✅ Path A: Self-setup → create account → create home profile → auto-create circle
+- ✅ Path B: Setting up for someone else → create account → create proxy Home Owner → create home profile → auto-create circle
+- ✅ Home profile form: address, year built, square footage, systems
+- ✅ Invite family members flow (optional, skippable)
 - ⬜ Designate successor prompt (optional, skippable)
 
 ---
 
-## Phase 1: Aware (Free Tier)
+## Phase 1: Aware (Free Tier) — Complete ✅
 
 ### Pillar 1 — The Home
-- ⬜ Home profile view and edit
-- ⬜ Home systems list (add, edit, remove systems)
-- ⬜ Maintenance calendar (auto-generated from system data + templates)
-- ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
-- ⬜ Home health score (simple traffic-light dashboard)
-- ⬜ Seasonal maintenance reminders (Colorado-specific templates)
+- ✅ Home profile view and edit
+- ✅ Home systems list (add, edit, remove systems)
+- ✅ Maintenance calendar (auto-generated from system data + templates)
+- ✅ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
+- ✅ Home health score (simple traffic-light dashboard)
+- ✅ Seasonal maintenance reminders (Colorado-specific templates)
 - ⬜ DIY maintenance checklist — seasonal task list with simple instructions for free tier users. Scales to enhanced (Prepared), vendor-handled (Covered), and concierge-managed (Complete) at higher tiers. This is the natural upgrade trigger from free to paid.
 
 ### Core Platform
-- ⬜ Dashboard: home health score + upcoming maintenance + recent activity
+- ✅ Dashboard: home health score + upcoming maintenance + recent activity
 - ✅ Settings: profile, notification preferences, circle management
-- ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav)
-- ⬜ Accessibility audit (WCAG 2.1 AA minimum)
+- ✅ Mobile responsive (senior-first: large text, high contrast, simple nav)
+- ✅ Accessibility audit (WCAG 2.1 AA minimum)
 
 ---
 
-## Phase 2: Prepared Tier (Paid Digital)
+## Phase 2: Prepared Tier (Paid Digital) — **Active Sprint**
 
 > *Your plans organized, your family coordinated.*
 
@@ -161,7 +155,6 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ## Open Questions
 
-- Framework decision: plain HTML/JS, React, or Svelte for the app?
 - Mobile: responsive web first, or native app consideration?
 - Offline capability: service worker for core features?
 - Notification delivery: email-first, then SMS, then push?
