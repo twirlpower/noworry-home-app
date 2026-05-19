@@ -432,6 +432,32 @@ select.form-input {
   font-style: italic;
 }
 
+.dash-card-wide {
+  grid-column: 1 / -1;
+}
+
+.dash-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dash-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.dash-list-meta {
+  font-size: 0.82rem;
+  color: var(--clay);
+  flex-shrink: 0;
+}
+
 .health-score {
   font-size: 1.3rem;
   font-weight: 700;

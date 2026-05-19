@@ -76,13 +76,13 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ✅ Home systems list (add, edit, remove systems) — add/edit/remove live & smoke-tested (remove = soft-delete via is_active, covered by RLS v2 update)
 - ⬜ Maintenance calendar (auto-generated from system data + templates) — view + RLS live; generation RPC + seeded CO templates written (migrations/004, explicit-RPC strategy), deploy pending
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.) — page + 13-item checklist with completion % built; migrations/005 (table + Pillar-1 RLS) deploy pending
-- ⬜ Home health score (simple traffic-light dashboard) — scoring lib (computeHomeHealth) + traffic-light widget with factor breakdown built; dashboard wiring next
+- ✅ Home health score (simple traffic-light dashboard) — scoring lib + traffic-light widget with factor breakdown, wired into the dashboard
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
 - ⬜ Asset warranty tracking — link warranty documents to home systems, track expiration dates, alert before lapse
 - ⬜ Warranty document upload — tied to home systems, stored in Supabase storage
 
 ### Core Platform
-- ⬜ Dashboard: home health score + upcoming maintenance + recent activity
+- ⬜ Dashboard: home health score + upcoming maintenance + recent activity — health score + upcoming maintenance + open tasks wired to real data; recent activity placeholder (audit_log RLS not yet deployed)
 - ⬜ Settings: profile, notification preferences, circle management
 - ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav)
 - ⬜ Accessibility audit (WCAG 2.1 AA minimum)
