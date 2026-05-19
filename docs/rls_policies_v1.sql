@@ -4,6 +4,7 @@
 --   persons, homes, circle_homes, family_circles, circle_memberships
 -- Goal: make signup -> onboarding -> dashboard work end-to-end.
 -- Run AFTER noworry_home_schema_v1.0.sql, in the Supabase SQL Editor.
+-- Idempotent: safe to re-run (drops policies/trigger before recreating).
 --
 -- Permission model — from the Family Graph Spec permission matrix:
 --   Role            Home        Plan        Family       Continuity
@@ -174,17 +175,20 @@ to authenticated;
 -- RLS is already enabled on every table by the v1.0 schema.
 
 -- persons -------------------------------------------------------------------
+drop policy if exists persons_select on persons;
 create policy persons_select on persons for select using (
   auth_id = auth.uid()
   or created_by = public.current_person_id()
   or public.can_view_person(persons.id)
 );
 
+drop policy if exists persons_insert on persons;
 create policy persons_insert on persons for insert with check (
   auth_id = auth.uid()
   or (auth_id is null and created_by = public.current_person_id())
 );
 
+drop policy if exists persons_update on persons;
 create policy persons_update on persons for update
 using   (auth_id = auth.uid() or created_by = public.current_person_id())
 with check (auth_id = auth.uid() or created_by = public.current_person_id());
@@ -192,10 +196,12 @@ with check (auth_id = auth.uid() or created_by = public.current_person_id());
 -- family_circles ------------------------------------------------------------
 -- Container: any active member may read (entry point even for Trusted Advisor /
 -- Service Partner). Writes = Family-write roles. Created only via the RPC.
+drop policy if exists circles_select on family_circles;
 create policy circles_select on family_circles for select using (
   public.is_active_member(id)
 );
 
+drop policy if exists circles_update on family_circles;
 create policy circles_update on family_circles for update
 using   (public.has_circle_role(id, array['home_owner','circle_manager','care_partner']::circle_role[]))
 with check (public.has_circle_role(id, array['home_owner','circle_manager','care_partner']::circle_role[]));
@@ -203,24 +209,29 @@ with check (public.has_circle_role(id, array['home_owner','circle_manager','care
 -- circle_memberships (Pillar 3: Family) -------------------------------------
 -- Always see your own row; Family-read roles see the full roster; Family-write
 -- roles manage members.
+drop policy if exists memberships_select on circle_memberships;
 create policy memberships_select on circle_memberships for select using (
   person_id = public.current_person_id()
   or public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner','family_member']::circle_role[])
 );
 
+drop policy if exists memberships_insert on circle_memberships;
 create policy memberships_insert on circle_memberships for insert with check (
   public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner']::circle_role[])
 );
 
+drop policy if exists memberships_update on circle_memberships;
 create policy memberships_update on circle_memberships for update
 using   (public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner']::circle_role[]))
 with check (public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner']::circle_role[]));
 
 -- circle_homes (Pillar 1: Home) ---------------------------------------------
+drop policy if exists circle_homes_select on circle_homes;
 create policy circle_homes_select on circle_homes for select using (
   public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner','family_member']::circle_role[])
 );
 
+drop policy if exists circle_homes_update on circle_homes;
 create policy circle_homes_update on circle_homes for update
 using   (public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner']::circle_role[]))
 with check (public.has_circle_role(circle_id, array['home_owner','circle_manager','care_partner']::circle_role[]));
@@ -228,6 +239,7 @@ with check (public.has_circle_role(circle_id, array['home_owner','circle_manager
 -- homes (Pillar 1: Home) ----------------------------------------------------
 -- Permanent records reached through circle_homes. Home-read roles read;
 -- Home-write roles update.
+drop policy if exists homes_select on homes;
 create policy homes_select on homes for select using (
   exists (
     select 1 from circle_homes ch
@@ -236,6 +248,7 @@ create policy homes_select on homes for select using (
   )
 );
 
+drop policy if exists homes_update on homes;
 create policy homes_update on homes for update
 using (
   exists (

@@ -35,6 +35,16 @@ export default function Onboarding() {
     setError('')
     setLoading(true)
 
+    if (!person) {
+      setError(
+        'Your account is signed in but your profile record is missing. ' +
+        'This usually means the database setup is incomplete — sign out, ' +
+        'create a fresh account, and try again.'
+      )
+      setLoading(false)
+      return
+    }
+
     const circleName = setupType === 'other'
       ? `${ownerFirst}'s Home Circle`
       : `${person.first_name}'s Home Circle`

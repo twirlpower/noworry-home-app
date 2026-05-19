@@ -28,11 +28,13 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function loadPerson(authId) {
+    // maybeSingle(): 0 rows → data:null, no error (a missing persons row is a
+    // recoverable state — handled in the UI — not an HTTP 406 to swallow).
     const { data } = await supabase
       .from('persons')
       .select('*')
       .eq('auth_id', authId)
-      .single()
+      .maybeSingle()
     setPerson(data)
     setLoading(false)
   }
