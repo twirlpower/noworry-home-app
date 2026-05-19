@@ -39,6 +39,12 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }
 
+  // Re-pull the current person's row after an edit (Settings → My Profile) so
+  // the cached name/timezone in nav and elsewhere stays in sync.
+  async function refreshPerson() {
+    if (user?.id) await loadPerson(user.id)
+  }
+
   async function signUp(email, password, firstName, lastName) {
     // The persons row is created by the on_auth_user_created trigger from
     // user_metadata (see migrations/rls_policies_v1.sql). loadPerson() picks it up
@@ -78,6 +84,7 @@ export function AuthProvider({ children }) {
     signIn,
     signOut,
     resetPassword,
+    refreshPerson,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

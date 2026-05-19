@@ -80,7 +80,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Core Platform
 - ⬜ Dashboard: home health score + upcoming maintenance + recent activity
-- ⬜ Settings: profile, notification preferences, circle management
+- ✅ Settings: profile, notification preferences, circle management
 - ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav)
 - ⬜ Accessibility audit (WCAG 2.1 AA minimum)
 

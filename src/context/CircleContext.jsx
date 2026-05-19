@@ -51,12 +51,29 @@ export function CircleProvider({ children }) {
     }
   }
 
+  // Immutably patch a cached circle (e.g. Settings rename) so the active
+  // circle and switcher reflect the change without a full reload. Callers
+  // must not mutate the circle objects directly (they're hook-owned state).
+  function applyCircleUpdate(circleId, patch) {
+    setActiveCircle((prev) =>
+      prev && prev.id === circleId ? { ...prev, ...patch } : prev
+    )
+    setCircles((prev) =>
+      prev.map((c) =>
+        c.family_circles?.id === circleId
+          ? { ...c, family_circles: { ...c.family_circles, ...patch } }
+          : c
+      )
+    )
+  }
+
   const value = {
     circles,
     activeCircle,
     membership,
     loading,
     switchCircle,
+    applyCircleUpdate,
     reloadCircles: loadCircles,
   }
 

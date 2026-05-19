@@ -12,6 +12,7 @@ import HomeProfile from './pages/HomeProfile'
 import Maintenance from './pages/Maintenance'
 import Safety from './pages/Safety'
 import Circle from './pages/Circle'
+import Settings from './pages/Settings'
 
 export default function App() {
   return (
@@ -39,7 +40,7 @@ export default function App() {
               <Route path="maintenance" element={<Maintenance />} />
               <Route path="safety" element={<Safety />} />
               <Route path="circle" element={<Circle />} />
-              <Route path="settings" element={<Placeholder title="Settings" />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -47,14 +48,5 @@ export default function App() {
         </CircleProvider>
       </AuthProvider>
     </BrowserRouter>
-  )
-}
-
-function Placeholder({ title }) {
-  return (
-    <div className="page">
-      <h1>{title}</h1>
-      <p className="page-placeholder">This section is coming soon.</p>
-    </div>
   )
 }
