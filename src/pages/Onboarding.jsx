@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+import RoleSelect from '../components/RoleSelect'
 
 export default function Onboarding() {
   const location = useLocation()
@@ -14,6 +15,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(setupType === 'other' ? 'homeowner' : 'home')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [createdCircleId, setCreatedCircleId] = useState(null)
+  const [invites, setInvites] = useState([
+    { first: '', last: '', email: '', role: 'family_member' },
+    { first: '', last: '', email: '', role: 'family_member' },
+    { first: '', last: '', email: '', role: 'family_member' },
+  ])
 
   // Home Owner info (for "setting up for someone else")
   const [ownerFirst, setOwnerFirst] = useState('')
@@ -157,8 +164,108 @@ export default function Onboarding() {
       }
     }
 
+    setCreatedCircleId(circleId)
+    setLoading(false)
+    setStep('invite')
+  }
+
+  function setInviteField(i, key, val) {
+    setInvites((arr) => arr.map((s, idx) => (idx === i ? { ...s, [key]: val } : s)))
+  }
+
+  async function finishOnboarding() {
     await reloadCircles()
     navigate('/dashboard')
+  }
+
+  async function sendInvites() {
+    setError('')
+    setLoading(true)
+    const filled = invites.filter((s) => s.first.trim() && s.last.trim())
+    for (const s of filled) {
+      const { data: invP, error: pErr } = await supabase
+        .from('persons')
+        .insert({
+          first_name: s.first.trim(),
+          last_name: s.last.trim(),
+          email: s.email.trim() || null,
+          auth_status: 'proxy',
+          created_by: person.id,
+        })
+        .select()
+        .single()
+      if (pErr) {
+        setError(
+          /duplicate key|unique/i.test(pErr.message)
+            ? `That email for ${s.first} already has a profile — clear it, or finish and invite later from My Circle.`
+            : pErr.message
+        )
+        setLoading(false)
+        return
+      }
+      const { error: mErr } = await supabase.from('circle_memberships').insert({
+        person_id: invP.id,
+        circle_id: createdCircleId,
+        role: s.role,
+        status: 'invited',
+        invited_by: person.id,
+      })
+      if (mErr) {
+        setError(mErr.message)
+        setLoading(false)
+        return
+      }
+    }
+    await finishOnboarding()
+  }
+
+  // Step: invite family (after the circle is created, before the dashboard)
+  if (step === 'invite') {
+    return (
+      <div className="auth-page">
+        <div className="auth-card auth-card-wide">
+          <h1>Your Home Circle is set up! 🎉</h1>
+          <p className="auth-subtitle">
+            Want to invite family members? You can always do this later from My Circle.
+          </p>
+
+          {error && <div className="auth-error" role="alert">{error}</div>}
+
+          <form onSubmit={(e) => { e.preventDefault(); sendInvites() }}>
+            {invites.map((s, i) => (
+              <div className="invite-slot" key={i}>
+                <div className="form-row">
+                  <label className="form-label">
+                    First name
+                    <input type="text" value={s.first} onChange={(e) => setInviteField(i, 'first', e.target.value)} className="form-input" />
+                  </label>
+                  <label className="form-label">
+                    Last name
+                    <input type="text" value={s.last} onChange={(e) => setInviteField(i, 'last', e.target.value)} className="form-input" />
+                  </label>
+                </div>
+                <label className="form-label">
+                  Email (optional)
+                  <input type="email" value={s.email} onChange={(e) => setInviteField(i, 'email', e.target.value)} className="form-input" placeholder="them@example.com" />
+                </label>
+                <RoleSelect
+                  name={`invite-role-${i}`}
+                  value={s.role}
+                  onChange={(r) => setInviteField(i, 'role', r)}
+                />
+              </div>
+            ))}
+
+            <button type="submit" className="btn-primary-full" disabled={loading}>
+              {loading ? 'Sending…' : 'Send Invites'}
+            </button>
+            <button type="button" className="btn-back" onClick={finishOnboarding} disabled={loading}>
+              I'll do this later
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   // Step: Home Owner info (only for "setting up for someone else")

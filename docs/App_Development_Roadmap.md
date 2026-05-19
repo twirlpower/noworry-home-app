@@ -1,6 +1,6 @@
 # NoWorry Home — App Development Roadmap
 
-Updated: May 19, 2026
+Updated: May 18, 2026
 
 ---
 
@@ -18,8 +18,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - **Circle isolation**: absolute privacy between circles, no data bridge
 - **Permanent home record**: Carfax-for-homes — persists across ownership
 - **Stack**: Supabase (PostgreSQL + Auth + Storage) → Vercel (hosting) → GitHub (code)
-- **Schema**: 20 tables (incl. family_group_circles join table), RLS enabled, all enums use customer-facing names
-- **RLS bootstrap pattern**: onboarding runs through a `SECURITY DEFINER` RPC (`setup_home_circle`) for atomicity and to bypass the RLS chicken-and-egg; the `persons` row is created by an `auth.users` trigger (`handle_new_user`) from signup metadata, not a client insert
+- **Schema**: 19 tables, RLS enabled, all enums use customer-facing names
 
 ---
 
@@ -31,11 +30,11 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ✅ Vercel project created
 - ✅ Family Graph Spec v1.0 complete
 - ✅ SQL schema v1.0 written (19 tables)
-- ✅ SQL schema deployed to Supabase (20 tables — roadmap's "19" undercounts the join table)
+- ⬜ SQL schema deployed to Supabase
 - ⬜ Supabase Auth configured
 - ⬜ Supabase env vars added to Vercel
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed (v1 + v2 deployed & smoke-tested — 7 tables: 5 bootstrap + home_systems + scheduled_maintenance — `migrations/rls_policies_v1.sql`, `migrations/rls_policies_v2.sql`; 13 tables still deny-all)
+- ⬜ RLS policies written and deployed
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
@@ -61,7 +60,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Onboarding Flow
 - ⬜ First screen: "Setting up for myself" vs "Setting up for someone else"
-- ✅ Path A: Self-setup → create account → create home profile → auto-create circle (smoke-tested end-to-end)
+- ⬜ Path A: Self-setup → create account → create home profile → auto-create circle
 - ⬜ Path B: Setting up for someone else → create account → create proxy Home Owner → create home profile → auto-create circle
 - ⬜ Home profile form: address, year built, square footage, systems
 - ⬜ Invite family members flow (optional, skippable)
@@ -72,21 +71,18 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 ## Phase 1: Home Base (Free Tier)
 
 ### Pillar 1 — The Home
-- ✅ Home profile view and edit
-- ✅ Address autocomplete from county assessor data (home_seeds, ~368K Arapahoe/Douglas homes) — onboarding full-text search + "We found your home" confirm; prefills year/sqft/beds/baths, creates HVAC + roof home_systems; no migration (reads as authenticated, RLS v2 covers the system inserts)
-- ✅ Home systems list (add, edit, remove systems) — add/edit/remove live & smoke-tested (remove = soft-delete via is_active, covered by RLS v2 update)
-- ✅ Maintenance calendar (auto-generated from system data + templates) — view + RLS + generate_maintenance_for_home RPC (migrations/004) deployed & smoke-tested (step 8 green); seeded CO templates
-- ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.) — page + 13-item checklist with completion % built; migrations/005 (table + Pillar-1 RLS) deploy pending
-- ✅ Home health score (simple traffic-light dashboard) — scoring lib + traffic-light widget wired into the dashboard; refined: by-type lifespan defaults (furnace 18 / water heater 10 / roof 25), 5 weighted factors (safety + overdue heaviest, +due-within-30d, profile lightest)
-- ⬜ Seasonal maintenance reminders (Colorado-specific templates) — migrations/006 written: altitude/Front-Range notes on 004's HVAC/roof templates + new CO templates (sprinkler winterize/spring, dryer vent, smoke/CO batteries, exterior paint/caulk, snow-removal prep); deploy pending
-- ⬜ Asset warranty tracking — link warranty documents to home systems, track expiration dates, alert before lapse
-- ⬜ Warranty document upload — tied to home systems, stored in Supabase storage
+- ⬜ Home profile view and edit
+- ⬜ Home systems list (add, edit, remove systems)
+- ⬜ Maintenance calendar (auto-generated from system data + templates)
+- ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
+- ⬜ Home health score (simple traffic-light dashboard)
+- ⬜ Seasonal maintenance reminders (Colorado-specific templates)
 
 ### Core Platform
-- ⬜ Dashboard: home health score + upcoming maintenance + recent activity — health score + upcoming maintenance + open tasks wired to real data; recent activity placeholder (audit_log RLS not yet deployed)
+- ⬜ Dashboard: home health score + upcoming maintenance + recent activity
 - ⬜ Settings: profile, notification preferences, circle management
-- ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav) — pass done: nav scroll-row with 48px targets, stacked page/card headers + system/maint rows, 44px inline actions, 480px breakpoint; on-device verification still TODO
-- ✅ Accessibility audit (WCAG 2.1 AA minimum) — inline fixes: skip-to-content link, global :focus-visible indicators, AA contrast (--muted/--amber-text/--red-text replace low-contrast accent text), aria-label on circle switcher, role=progressbar on safety bar, role=alert/status on error/notice + loading, reduced-motion, decorative spinner aria-hidden. Wrapping <label> associations already valid. (Automated axe/AT spot-check still recommended.)
+- ⬜ Mobile responsive (senior-first: large text, high contrast, simple nav)
+- ⬜ Accessibility audit (WCAG 2.1 AA minimum)
 
 ---
 
@@ -100,7 +96,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Wishes and preferences
 
 ### Pillar 3 — The Family
-- ⬜ Family member invitation flow (email + role assignment) — STARTED: My Circle page with member roster + invite form that creates an invited person + circle_membership (status=invited) under deployed v1 RLS; email delivery + account-claim-on-signup still TODO
+- ⬜ Family member invitation flow (email + role assignment)
 - ⬜ Role management (Circle Manager can change roles)
 - ⬜ Task management (create, assign, complete, comment)
 - ⬜ Notes and family updates feed
@@ -123,6 +119,15 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Service tracking (scheduled, in-progress, complete)
 - ⬜ Vendor follow-up and rating
 - ⬜ Service history tied to home record
+
+### Vendor Portal
+- ⬜ Vendor login and dashboard
+- ⬜ Employee management — add/remove employees, each triggers $49 background check fee (auto-charged)
+- ⬜ Credential management — upload/maintain licenses, COI, business registration with expiration tracking
+- ⬜ Job assignment — vendor specifies which employee(s) will work each job before dispatch
+- ⬜ Pre-visit notification — system sends member the name and photo of the person arriving before each visit
+- ⬜ Job completion reporting — vendor marks complete, adds notes/photos through portal
+- ⬜ Payment history and upcoming work view
 
 ### Pillar 4 — Continuity
 - ⬜ Succession configuration (designate successor + confirmer)
@@ -158,4 +163,3 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - Notification delivery: email-first, then SMS, then push?
 - Maintenance template seed data: how many templates for Colorado launch?
 - Admin panel: separate app or role-gated views within the same app?
-- Email confirmation: on or off for launch? If on, signup must land on a "check your email" screen instead of `/onboarding` (protected route bounces with no session until confirmed).

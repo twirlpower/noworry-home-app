@@ -2,23 +2,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+import { ROLE_LABELS } from '../lib/circleRoles'
+import RoleSelect from '../components/RoleSelect'
 
 // Family pillar = Full → can manage members (Family Graph matrix).
 const MANAGE_ROLES = ['home_owner', 'circle_manager', 'care_partner']
-
-const ROLE_LABELS = {
-  home_owner: 'Home Owner',
-  circle_manager: 'Circle Manager',
-  care_partner: 'Care Partner',
-  service_partner: 'Service Partner',
-  helper: 'Helper',
-  family_member: 'Family Member',
-  trusted_advisor: 'Trusted Advisor',
-}
-
-// Roles an inviter can assign (not Home Owner — that's the proxy/owner set at
-// onboarding, not invited).
-const INVITABLE = ['family_member', 'care_partner', 'circle_manager', 'helper', 'service_partner', 'trusted_advisor']
 
 export default function Circle() {
   const { person } = useAuth()
@@ -173,20 +161,11 @@ export default function Circle() {
             Email (optional for now)
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="form-input" placeholder="them@example.com" />
           </label>
-          <div className="form-row">
-            <label className="form-label">
-              Role
-              <select value={role} onChange={(e) => setRole(e.target.value)} className="form-input">
-                {INVITABLE.map((r) => (
-                  <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-label">
-              Relationship (optional)
-              <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} className="form-input" placeholder="daughter, neighbor…" />
-            </label>
-          </div>
+          <RoleSelect name="invite-role" value={role} onChange={setRole} />
+          <label className="form-label">
+            Relationship (optional)
+            <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} className="form-input" placeholder="daughter, neighbor…" />
+          </label>
           <button type="submit" className="btn-primary-full" disabled={saving}>
             {saving ? 'Adding…' : 'Add to Circle'}
           </button>

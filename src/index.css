@@ -986,6 +986,75 @@ textarea.form-input {
   color: var(--muted);
 }
 
+/* ── ROLE SELECT (invite form + onboarding) ── */
+.role-select {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.1rem;
+}
+
+.role-select-legend {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--cool);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.role-option:hover {
+  border-color: var(--muted-teal);
+}
+
+.role-option-active {
+  border-color: var(--teal);
+  background: #F0FBF7;
+}
+
+.role-option input {
+  margin-top: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.role-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.role-option-label {
+  font-weight: 700;
+  color: var(--deep);
+  font-size: 0.95rem;
+}
+
+.role-option-desc {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.invite-slot {
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.1rem;
+  border-bottom: 1px solid var(--cool);
+}
+
 /* ── CIRCLE / MEMBERS ── */
 .auth-notice {
   background: #E1F5EE;
