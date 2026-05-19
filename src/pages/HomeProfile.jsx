@@ -37,6 +37,7 @@ export default function HomeProfile() {
   const canEdit = EDIT_ROLES.includes(membership?.role)
 
   const [home, setHome] = useState(null)
+  const [systems, setSystems] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(EMPTY)
@@ -59,7 +60,18 @@ export default function HomeProfile() {
         } else {
           const found = data?.[0]?.homes ?? null
           setHome(found)
-          if (found) setForm(toForm(found))
+          if (found) {
+            setForm(toForm(found))
+            supabase
+              .from('home_systems')
+              .select('*')
+              .eq('home_id', found.id)
+              .eq('is_active', true)
+              .order('system_type')
+              .then(({ data: sys }) => {
+                if (!cancelled) setSystems(sys ?? [])
+              })
+          }
         }
         setLoading(false)
       })
@@ -300,6 +312,35 @@ export default function HomeProfile() {
             <span className="detail-label">Notes</span>
             <p>{home.notes}</p>
           </div>
+        )}
+      </div>
+
+      <div className="profile-card">
+        <div className="card-header">
+          <h3>Home Systems</h3>
+          {canEdit && (
+            <button className="btn-secondary" disabled title="Coming soon">
+              Add System
+            </button>
+          )}
+        </div>
+        {systems.length === 0 ? (
+          <p className="page-placeholder">
+            No systems added yet. Track your HVAC, water heater, roof, and
+            appliances here to get maintenance reminders.
+          </p>
+        ) : (
+          <ul className="systems-list">
+            {systems.map((s) => (
+              <li key={s.id} className="system-row">
+                <span className="system-name">{s.name}</span>
+                <span className="system-meta">
+                  {s.system_type?.replace(/_/g, ' ')}
+                  {s.location_in_home ? ` · ${s.location_in_home}` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
