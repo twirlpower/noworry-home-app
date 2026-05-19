@@ -183,13 +183,16 @@ const inviteEmail = `invite+${stamp}@noworry-home.test`
     })
     if (imErr) bad(`invited membership insert blocked: ${imErr.message}`)
     else {
-      const { data: roster } = await supabase
+      const { data: roster, error: rosErr } = await supabase
         .from('circle_memberships')
-        .select('status, persons (first_name)')
+        .select('status, persons!person_id (first_name)')
         .eq('circle_id', circleId)
-      const invited = (roster ?? []).filter((r) => r.status === 'invited')
-      if (invited.length) ok(`invite ok (${invited.length} invited member visible)`)
-      else bad('invited membership not visible under RLS')
+      if (rosErr) bad(`roster select errored: ${rosErr.code} ${rosErr.message}`)
+      else {
+        const invited = (roster ?? []).filter((r) => r.status === 'invited')
+        if (invited.length) ok(`invite ok (${invited.length} invited member visible)`)
+        else bad('invited membership not visible under RLS')
+      }
     }
   }
 }

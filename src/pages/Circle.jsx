@@ -43,7 +43,7 @@ export default function Circle() {
     let cancelled = false
     supabase
       .from('circle_memberships')
-      .select('id, role, status, relationship, persons (first_name, last_name, email, auth_status)')
+      .select('id, role, status, relationship, persons!person_id (first_name, last_name, email, auth_status)')
       .eq('circle_id', activeCircle.id)
       .order('created_at', { ascending: true })
       .then(({ data, error: e }) => {
@@ -60,7 +60,7 @@ export default function Circle() {
   async function reloadMembers() {
     const { data } = await supabase
       .from('circle_memberships')
-      .select('id, role, status, relationship, persons (first_name, last_name, email, auth_status)')
+      .select('id, role, status, relationship, persons!person_id (first_name, last_name, email, auth_status)')
       .eq('circle_id', activeCircle.id)
       .order('created_at', { ascending: true })
     setMembers(data ?? [])
