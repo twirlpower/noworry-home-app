@@ -10,6 +10,7 @@ import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import HomeProfile from './pages/HomeProfile'
 import Maintenance from './pages/Maintenance'
+import Safety from './pages/Safety'
 
 export default function App() {
   return (
@@ -35,7 +36,7 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="home-profile" element={<HomeProfile />} />
               <Route path="maintenance" element={<Maintenance />} />
-              <Route path="safety" element={<Placeholder title="Safety Checklist" />} />
+              <Route path="safety" element={<Safety />} />
               <Route path="circle" element={<Placeholder title="My Circle" />} />
               <Route path="settings" element={<Placeholder title="Settings" />} />
             </Route>

@@ -146,6 +146,26 @@ if (homeId) {
   }
 } else bad('skipped — no home id')
 
+// 9. Migration 005 — safety_checklist upsert + read (Pillar-1 RLS).
+console.log('9. safety_checklist upsert + read (migration 005)')
+if (homeId) {
+  const { error: upErr } = await supabase.from('safety_checklist').upsert(
+    { home_id: homeId, circle_id: circleId, item_key: 'smoke_each_level', is_complete: true },
+    { onConflict: 'home_id,item_key' }
+  )
+  if (upErr) {
+    const missing = /relation .* does not exist|PGRST205|schema cache/i.test(upErr.message)
+    bad(missing
+      ? 'safety_checklist not deployed — run migrations/005_safety_checklist.sql'
+      : `safety_checklist upsert blocked: ${upErr.message}`)
+  } else {
+    const { data: sc } = await supabase
+      .from('safety_checklist').select('*').eq('home_id', homeId).eq('is_complete', true)
+    if (sc?.length) ok(`safety_checklist upsert+read ok (${sc.length} item)`)
+    else bad('safety_checklist upserted but not visible under RLS')
+  }
+} else bad('skipped — no home id')
+
 console.log(
   process.exitCode
     ? '\n✗ SMOKE TEST FAILED — see above.'
@@ -153,6 +173,7 @@ console.log(
 )
 console.log(
   `\nCleanup (run in Supabase SQL Editor, in this order):\n` +
+  `  delete from safety_checklist where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
   `  delete from scheduled_maintenance where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
   `  delete from home_systems where home_id in (select home_id from circle_homes where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle'));\n` +
   `  delete from circle_homes where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
