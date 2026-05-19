@@ -35,7 +35,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Supabase Auth configured
 - ⬜ Supabase env vars added to Vercel
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed (v1 deployed & smoke-tested for the 5 bootstrap tables per the Family Graph permission matrix — `docs/rls_policies_v1.sql`; 15 tables still deny-all, to be added incrementally)
+- ⬜ RLS policies written and deployed (v1 deployed & smoke-tested for the 5 bootstrap tables — `docs/rls_policies_v1.sql`; v2 written for home_systems + scheduled_maintenance — `docs/rls_policies_v2.sql`, deploy pending; 13 tables still deny-all)
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
