@@ -35,7 +35,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Supabase Auth configured
 - ⬜ Supabase env vars added to Vercel
 - ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
-- ⬜ RLS policies written and deployed (v1 written for the 5 bootstrap tables per the Family Graph permission matrix — `docs/rls_policies_v1.sql`; deploy pending; 15 tables still deny-all, to be added incrementally)
+- ⬜ RLS policies written and deployed (v1 deployed & smoke-tested for the 5 bootstrap tables per the Family Graph permission matrix — `docs/rls_policies_v1.sql`; 15 tables still deny-all, to be added incrementally)
 
 ### Marketing Site
 - ✅ Homepage built (index.html)
@@ -61,7 +61,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Onboarding Flow
 - ⬜ First screen: "Setting up for myself" vs "Setting up for someone else"
-- ⬜ Path A: Self-setup → create account → create home profile → auto-create circle
+- ✅ Path A: Self-setup → create account → create home profile → auto-create circle (smoke-tested end-to-end)
 - ⬜ Path B: Setting up for someone else → create account → create proxy Home Owner → create home profile → auto-create circle
 - ⬜ Home profile form: address, year built, square footage, systems
 - ⬜ Invite family members flow (optional, skippable)
@@ -73,8 +73,8 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Pillar 1 — The Home
 - ✅ Home profile view and edit
-- ⬜ Home systems list (add, edit, remove systems)
-- ⬜ Maintenance calendar (auto-generated from system data + templates)
+- ⬜ Home systems list (add, edit, remove systems) — list + empty state shown on Home Profile; add/edit/remove + RLS still TODO
+- ⬜ Maintenance calendar (auto-generated from system data + templates) — view shipped with due-date buckets + empty state; auto-generation + RLS still TODO
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
 - ⬜ Home health score (simple traffic-light dashboard)
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
