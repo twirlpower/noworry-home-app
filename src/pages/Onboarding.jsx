@@ -170,22 +170,22 @@ export default function Onboarding() {
 
           <div className="form-row">
             <label className="form-label">
-              Year built
+              Year built (optional)
               <input type="number" value={yearBuilt} onChange={(e) => setYearBuilt(e.target.value)} className="form-input" placeholder="1985" />
             </label>
             <label className="form-label">
-              Square feet
+              Square feet (optional)
               <input type="number" value={sqft} onChange={(e) => setSqft(e.target.value)} className="form-input" placeholder="2200" />
             </label>
           </div>
 
           <div className="form-row">
             <label className="form-label">
-              Bedrooms
+              Bedrooms (optional)
               <input type="number" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} className="form-input" />
             </label>
             <label className="form-label">
-              Bathrooms
+              Bathrooms (optional)
               <input type="number" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} className="form-input" step="0.5" />
             </label>
           </div>
