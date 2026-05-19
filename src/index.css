@@ -570,6 +570,12 @@ textarea.form-input {
   cursor: not-allowed;
 }
 
+.system-add-form {
+  margin-bottom: 1.3rem;
+  padding-bottom: 1.3rem;
+  border-bottom: 1px solid var(--cool);
+}
+
 .systems-list {
   list-style: none;
   display: flex;

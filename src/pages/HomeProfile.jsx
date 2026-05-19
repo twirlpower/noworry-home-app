@@ -24,6 +24,29 @@ const EMPTY = {
 // home record at all (enforced server-side by RLS, see docs/rls_policies_v1.sql).
 const EDIT_ROLES = ['home_owner', 'circle_manager', 'care_partner']
 
+const SYSTEM_TYPES = [
+  ['hvac', 'HVAC'],
+  ['water_heater', 'Water heater'],
+  ['plumbing', 'Plumbing'],
+  ['electrical', 'Electrical'],
+  ['roof', 'Roof'],
+  ['foundation', 'Foundation'],
+  ['appliance', 'Appliance'],
+  ['security', 'Security'],
+  ['garage', 'Garage'],
+  ['other', 'Other'],
+]
+
+const SYS_EMPTY = {
+  system_type: '',
+  name: '',
+  brand: '',
+  model: '',
+  install_date: '',
+  location_in_home: '',
+  notes: '',
+}
+
 function toForm(home) {
   const f = { ...EMPTY }
   for (const key of Object.keys(EMPTY)) {
@@ -43,6 +66,10 @@ export default function HomeProfile() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [addingSystem, setAddingSystem] = useState(false)
+  const [sysForm, setSysForm] = useState(SYS_EMPTY)
+  const [sysSaving, setSysSaving] = useState(false)
+  const [sysError, setSysError] = useState('')
 
   useEffect(() => {
     if (!activeCircle) return
@@ -139,6 +166,63 @@ export default function HomeProfile() {
     setForm(toForm(data))
     setEditing(false)
     setSaving(false)
+  }
+
+  function setSysField(key, value) {
+    setSysForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function openAddSystem() {
+    setSysForm(SYS_EMPTY)
+    setSysError('')
+    setAddingSystem(true)
+  }
+
+  function cancelAddSystem() {
+    setAddingSystem(false)
+    setSysError('')
+  }
+
+  async function reloadSystems() {
+    const { data } = await supabase
+      .from('home_systems')
+      .select('*')
+      .eq('home_id', home.id)
+      .eq('is_active', true)
+      .order('system_type')
+    setSystems(data ?? [])
+  }
+
+  async function handleAddSystem(e) {
+    e.preventDefault()
+    setSysError('')
+    setSysSaving(true)
+
+    const { error: insErr } = await supabase.from('home_systems').insert({
+      home_id: home.id,
+      system_type: sysForm.system_type,
+      name: sysForm.name,
+      brand: sysForm.brand || null,
+      model: sysForm.model || null,
+      install_date: sysForm.install_date || null,
+      location_in_home: sysForm.location_in_home || null,
+      notes: sysForm.notes || null,
+    })
+
+    if (insErr) {
+      const rls = /row-level security|permission denied/i.test(insErr.message)
+      setSysError(
+        rls
+          ? 'Could not save — the home_systems security policy is not deployed yet. Run docs/rls_policies_v2.sql in Supabase.'
+          : insErr.message
+      )
+      setSysSaving(false)
+      return
+    }
+
+    setSysSaving(false)
+    setAddingSystem(false)
+    await reloadSystems()
   }
 
   if (!activeCircle) {
@@ -318,17 +402,69 @@ export default function HomeProfile() {
       <div className="profile-card">
         <div className="card-header">
           <h3>Home Systems</h3>
-          {canEdit && (
-            <button className="btn-secondary" disabled title="Coming soon">
+          {canEdit && !addingSystem && (
+            <button className="btn-secondary" onClick={openAddSystem}>
               Add System
             </button>
           )}
         </div>
+
+        {addingSystem && (
+          <form onSubmit={handleAddSystem} className="system-add-form">
+            {sysError && <div className="auth-error">{sysError}</div>}
+            <div className="form-row">
+              <label className="form-label">
+                System type
+                <select value={sysForm.system_type} onChange={(e) => setSysField('system_type', e.target.value)} required className="form-input">
+                  <option value="">Select…</option>
+                  {SYSTEM_TYPES.map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-label">
+                Name
+                <input type="text" value={sysForm.name} onChange={(e) => setSysField('name', e.target.value)} required className="form-input" placeholder="Lennox Furnace" />
+              </label>
+            </div>
+            <div className="form-row form-row-3">
+              <label className="form-label">
+                Brand (optional)
+                <input type="text" value={sysForm.brand} onChange={(e) => setSysField('brand', e.target.value)} className="form-input" />
+              </label>
+              <label className="form-label">
+                Model (optional)
+                <input type="text" value={sysForm.model} onChange={(e) => setSysField('model', e.target.value)} className="form-input" />
+              </label>
+              <label className="form-label">
+                Installed (optional)
+                <input type="date" value={sysForm.install_date} onChange={(e) => setSysField('install_date', e.target.value)} className="form-input" />
+              </label>
+            </div>
+            <label className="form-label">
+              Location in home (optional)
+              <input type="text" value={sysForm.location_in_home} onChange={(e) => setSysField('location_in_home', e.target.value)} className="form-input" placeholder="Basement utility closet" />
+            </label>
+            <label className="form-label">
+              Notes (optional)
+              <textarea value={sysForm.notes} onChange={(e) => setSysField('notes', e.target.value)} className="form-input" rows={2} />
+            </label>
+            <button type="submit" className="btn-primary-full" disabled={sysSaving}>
+              {sysSaving ? 'Saving…' : 'Save System'}
+            </button>
+            <button type="button" className="btn-back" onClick={cancelAddSystem} disabled={sysSaving}>
+              Cancel
+            </button>
+          </form>
+        )}
+
         {systems.length === 0 ? (
-          <p className="page-placeholder">
-            No systems added yet. Track your HVAC, water heater, roof, and
-            appliances here to get maintenance reminders.
-          </p>
+          !addingSystem && (
+            <p className="page-placeholder">
+              No systems added yet. Track your HVAC, water heater, roof, and
+              appliances here to get maintenance reminders.
+            </p>
+          )
         ) : (
           <ul className="systems-list">
             {systems.map((s) => (
