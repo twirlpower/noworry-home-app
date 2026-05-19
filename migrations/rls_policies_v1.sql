@@ -142,7 +142,7 @@ begin
   returning id into v_home;
 
   insert into family_circles (name, subscription_tier)
-  values (p_circle_name, 'home_base')
+  values (p_circle_name, 'aware')
   returning id into v_circle;
 
   insert into circle_homes (circle_id, home_id, is_primary)

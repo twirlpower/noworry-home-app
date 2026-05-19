@@ -27,7 +27,7 @@ create type membership_status as enum ('active', 'invited', 'removed', 'left');
 
 create type circle_home_status as enum ('active', 'archived', 'transferring');
 
-create type subscription_tier as enum ('home_base', 'organized', 'peace_of_mind', 'total_care');
+create type subscription_tier as enum ('aware', 'prepared', 'covered', 'complete');
 
 create type pillar as enum ('the_home', 'the_plan', 'the_family', 'continuity');
 
@@ -156,7 +156,7 @@ comment on table home_systems is 'Every tracked system/appliance in a home. Tied
 create table family_circles (
   id                uuid primary key default uuid_generate_v4(),
   name              text not null,                    -- e.g. "Margaret's Home Circle"
-  subscription_tier subscription_tier not null default 'home_base',
+  subscription_tier subscription_tier not null default 'aware',
   billing_person_id uuid references persons(id),      -- who pays (null for free tier)
   family_group_id   uuid,                             -- linked for family pricing (FK added after family_groups table)
   is_archived       boolean not null default false,

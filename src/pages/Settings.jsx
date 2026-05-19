@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+import { tierLabel } from '../lib/tiers'
 
 // Circle pillar = Full → may rename the circle (same matrix as HomeProfile /
 // Circle). Enforced server-side by circles_update (rls_policies_v1.sql).
@@ -21,13 +22,6 @@ const TIMEZONES = [
   'America/Anchorage',
   'Pacific/Honolulu',
 ]
-
-const TIER_LABELS = {
-  home_base: 'Home Base (free)',
-  organized: 'Organized',
-  peace_of_mind: 'Peace of Mind',
-  total_care: 'Total Care',
-}
 
 const PROFILE_EMPTY = {
   first_name: '',
@@ -384,7 +378,7 @@ export default function Settings() {
               <div className="detail-item">
                 <span className="detail-label">Plan</span>
                 <span className="detail-value">
-                  {TIER_LABELS[activeCircle.subscription_tier] ?? activeCircle.subscription_tier}
+                  {tierLabel(activeCircle.subscription_tier)}
                 </span>
               </div>
             </div>

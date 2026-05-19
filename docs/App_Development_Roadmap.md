@@ -6,7 +6,7 @@ Updated: May 18, 2026
 
 ## Vision
 
-A generational aging-in-place platform built on the Family Graph architecture. The family — not the individual — is the customer. Start with a free Home Base tier that works anywhere, expand to full-service coordination in active markets.
+A generational aging-in-place platform built on the Family Graph architecture. The family — not the individual — is the customer. Start with a free Aware tier that works anywhere, expand to full-service coordination in active markets.
 
 ---
 
@@ -68,7 +68,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ---
 
-## Phase 1: Home Base (Free Tier)
+## Phase 1: Aware (Free Tier)
 
 ### Pillar 1 — The Home
 - ⬜ Home profile view and edit
@@ -77,7 +77,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
 - ⬜ Home health score (simple traffic-light dashboard)
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
-- ⬜ DIY maintenance checklist — seasonal task list with simple instructions for free tier users. Scales to enhanced (Organized), vendor-handled (Peace of Mind), and concierge-managed (Total Care) at higher tiers. This is the natural upgrade trigger from free to paid.
+- ⬜ DIY maintenance checklist — seasonal task list with simple instructions for free tier users. Scales to enhanced (Prepared), vendor-handled (Covered), and concierge-managed (Complete) at higher tiers. This is the natural upgrade trigger from free to paid.
 
 ### Core Platform
 - ⬜ Dashboard: home health score + upcoming maintenance + recent activity
@@ -87,7 +87,9 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ---
 
-## Phase 2: Organized Tier (Paid Digital)
+## Phase 2: Prepared Tier (Paid Digital)
+
+> *Your plans organized, your family coordinated.*
 
 ### Pillar 2 — The Plan
 - ⬜ Document vault (upload, organize, tag by type)
@@ -112,7 +114,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ---
 
-## Phase 3: Peace of Mind + Total Care (Paid Local)
+## Phase 3: Covered + Complete (Paid Local)
 
 ### Vendor Dispatch
 - ⬜ Vendor directory (internal, admin-managed)
@@ -137,7 +139,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Emergency access flow
 - ⬜ Prompt engine v2 (plan-triggered + family-triggered)
 
-### Total Care Extras
+### Complete Extras
 - ⬜ Concierge dashboard (admin view for coordinating members)
 - ⬜ Physical Home Companion Binder generation
 - ⬜ Priority vendor scheduling
