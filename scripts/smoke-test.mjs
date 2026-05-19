@@ -166,10 +166,38 @@ if (homeId) {
   }
 } else bad('skipped — no home id')
 
+// 10. Family invite — invited person (proxy, created_by me) + invited
+//     membership, under deployed v1 RLS (persons_insert / memberships_insert).
+console.log('10. family invite (persons + circle_memberships)')
+const inviteEmail = `invite+${stamp}@noworry-home.test`
+{
+  const { data: inv, error: ipErr } = await supabase
+    .from('persons')
+    .insert({ first_name: 'Invited', last_name: 'Tester', email: inviteEmail, auth_status: 'proxy', created_by: person.id })
+    .select().single()
+  if (ipErr) bad(`invited persons insert blocked: ${ipErr.message}`)
+  else {
+    const { error: imErr } = await supabase.from('circle_memberships').insert({
+      person_id: inv.id, circle_id: circleId, role: 'family_member',
+      status: 'invited', invited_by: person.id,
+    })
+    if (imErr) bad(`invited membership insert blocked: ${imErr.message}`)
+    else {
+      const { data: roster } = await supabase
+        .from('circle_memberships')
+        .select('status, persons (first_name)')
+        .eq('circle_id', circleId)
+      const invited = (roster ?? []).filter((r) => r.status === 'invited')
+      if (invited.length) ok(`invite ok (${invited.length} invited member visible)`)
+      else bad('invited membership not visible under RLS')
+    }
+  }
+}
+
 console.log(
   process.exitCode
     ? '\n✗ SMOKE TEST FAILED — see above.'
-    : '\n✓ SMOKE TEST PASSED — signup → onboarding → dashboard + Pillar-1 RLS works.'
+    : '\n✓ SMOKE TEST PASSED — signup → onboarding → dashboard + Pillar-1 RLS + invite works.'
 )
 console.log(
   `\nCleanup (run in Supabase SQL Editor, in this order):\n` +
@@ -179,5 +207,5 @@ console.log(
   `  delete from circle_homes where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
   `  delete from family_circles where name = 'Smoke Test Home Circle';\n` +
   `  delete from auth.users where email = '${email}';\n` +
-  `  delete from persons where email = '${email}';`
+  `  delete from persons where email in ('${email}', '${inviteEmail}');`
 )

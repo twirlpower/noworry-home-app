@@ -99,7 +99,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Wishes and preferences
 
 ### Pillar 3 — The Family
-- ⬜ Family member invitation flow (email + role assignment)
+- ⬜ Family member invitation flow (email + role assignment) — STARTED: My Circle page with member roster + invite form that creates an invited person + circle_membership (status=invited) under deployed v1 RLS; email delivery + account-claim-on-signup still TODO
 - ⬜ Role management (Circle Manager can change roles)
 - ⬜ Task management (create, assign, complete, comment)
 - ⬜ Notes and family updates feed
