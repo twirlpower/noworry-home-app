@@ -21,7 +21,7 @@ const EMPTY = {
 
 // Home pillar = Full for these roles (Family Graph permission matrix); they can
 // edit. Family Member has Home = Read (view only). Other roles can't see the
-// home record at all (enforced server-side by RLS, see docs/rls_policies_v1.sql).
+// home record at all (enforced server-side by RLS, see migrations/rls_policies_v1.sql).
 const EDIT_ROLES = ['home_owner', 'circle_manager', 'care_partner']
 
 const SYSTEM_TYPES = [
@@ -209,7 +209,7 @@ export default function HomeProfile() {
 
   function sysRlsMessage(message) {
     return /row-level security|permission denied/i.test(message)
-      ? 'Could not save — the home_systems security policy is not deployed. Run docs/rls_policies_v2.sql in Supabase.'
+      ? 'Could not save — the home_systems security policy is not deployed. Run migrations/rls_policies_v2.sql in Supabase.'
       : message
   }
 

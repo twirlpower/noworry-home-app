@@ -59,6 +59,6 @@ if (missing === 0) {
   console.log(`✓ All ${TABLES.length} tables present. Schema v1.0 is deployed.`)
   process.exit(0)
 } else {
-  console.log(`✗ ${missing}/${TABLES.length} tables missing. Run docs/noworry_home_schema_v1.0.sql in the Supabase SQL Editor.`)
+  console.log(`✗ ${missing}/${TABLES.length} tables missing. Run migrations/noworry_home_schema_v1.0.sql in the Supabase SQL Editor.`)
   process.exit(1)
 }

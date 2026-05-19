@@ -51,7 +51,7 @@ export default function Onboarding() {
 
     // Single atomic RPC — creates home, circle, link, and memberships in one
     // transaction (SECURITY DEFINER, so it isn't blocked by the RLS bootstrap
-    // chicken-and-egg). See docs/rls_policies_v1.sql.
+    // chicken-and-egg). See migrations/rls_policies_v1.sql.
     const { error: rpcError } = await supabase.rpc('setup_home_circle', {
       p_setup_type: setupType,
       p_circle_name: circleName,

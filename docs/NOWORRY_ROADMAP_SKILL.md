@@ -71,10 +71,9 @@ When you write a new migration:
 - Note in the roadmap that it is written vs. deployed (the user runs SQL in
   the Supabase SQL Editor; deployment is not automatic)
 
-One-time exception: the pre-existing files committed before this convention —
-`docs/noworry_home_schema_v1.0.sql`, `docs/rls_policies_v1.sql`,
-`docs/rls_policies_v2.sql` — stay in `docs/` as-is. Do not move them; only new
-migrations follow the `migrations/` rule.
+The original three migrations were relocated from `docs/` to `migrations/`
+(`noworry_home_schema_v1.0.sql`, `rls_policies_v1.sql`, `rls_policies_v2.sql`),
+so `migrations/` is the single canonical home for all SQL — no exceptions.
 
 ## Current Stack
 

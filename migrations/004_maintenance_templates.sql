@@ -1,9 +1,8 @@
 -- ============================================================================
 -- NoWorry Home — Migration 004: maintenance templates + auto-generation
--- Run order: 001 = docs/noworry_home_schema_v1.0.sql,
---            002 = docs/rls_policies_v1.sql, 003 = docs/rls_policies_v2.sql
---            (those stay in docs/ as the documented one-time exception);
---            new migrations live here in migrations/.
+-- Run order: 001 = migrations/noworry_home_schema_v1.0.sql,
+--            002 = migrations/rls_policies_v1.sql,
+--            003 = migrations/rls_policies_v2.sql, then this (004).
 -- Depends on v1 helpers (current_person_id, has_circle_role).
 -- Run in the Supabase SQL Editor. Idempotent: safe to re-run.
 -- ============================================================================
