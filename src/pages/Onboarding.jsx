@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -30,6 +30,55 @@ export default function Onboarding() {
   const [bedrooms, setBedrooms] = useState('')
   const [bathrooms, setBathrooms] = useState('')
 
+  // Address autocomplete from home_seeds (Arapahoe/Douglas assessor data).
+  const [suggestions, setSuggestions] = useState([])
+  const [selectedSeed, setSelectedSeed] = useState(null)
+
+  useEffect(() => {
+    if (selectedSeed) return // a match is chosen — don't re-search
+    const t = setTimeout(async () => {
+      const q = address.trim()
+      if (q.length < 3) {
+        setSuggestions([])
+        return
+      }
+      // Prefix tsquery so it uses the GIN full-text index on address_line1.
+      const terms = q
+        .split(/\s+/)
+        .map((s) => s.replace(/[^\w]/g, ''))
+        .filter(Boolean)
+      if (!terms.length) return
+      terms[terms.length - 1] += ':*'
+      const { data } = await supabase
+        .from('home_seeds')
+        .select(
+          'id,address_line1,city,state,zip,year_built,square_feet,bedrooms,bathrooms,stories,hvac_type,roof_type'
+        )
+        .textSearch('address_line1', terms.join(' & '))
+        .limit(8)
+      setSuggestions(data ?? [])
+    }, 250)
+    return () => clearTimeout(t)
+  }, [address, selectedSeed])
+
+  function onAddressChange(v) {
+    setSelectedSeed(null) // manual typing clears any chosen match
+    setAddress(v)
+  }
+
+  function selectSeed(s) {
+    setAddress(s.address_line1)
+    setCity(s.city || '')
+    setState(s.state || 'CO')
+    setZip(s.zip || '')
+    setYearBuilt(s.year_built ?? '')
+    setSqft(s.square_feet ?? '')
+    setBedrooms(s.bedrooms ?? '')
+    setBathrooms(s.bathrooms ?? '')
+    setSuggestions([])
+    setSelectedSeed(s)
+  }
+
   async function handleComplete(e) {
     e.preventDefault()
     setError('')
@@ -52,7 +101,7 @@ export default function Onboarding() {
     // Single atomic RPC — creates home, circle, link, and memberships in one
     // transaction (SECURITY DEFINER, so it isn't blocked by the RLS bootstrap
     // chicken-and-egg). See migrations/rls_policies_v1.sql.
-    const { error: rpcError } = await supabase.rpc('setup_home_circle', {
+    const { data: circleId, error: rpcError } = await supabase.rpc('setup_home_circle', {
       p_setup_type: setupType,
       p_circle_name: circleName,
       p_home: {
@@ -75,6 +124,37 @@ export default function Onboarding() {
       setError(rpcError.message || 'Something went wrong. Please try again.')
       setLoading(false)
       return
+    }
+
+    // Best-effort: persist seed extras that the bootstrap RPC doesn't take
+    // (stories on the home; HVAC/roof as home_systems for maintenance gen).
+    // Non-fatal — onboarding already succeeded; failures just skip the extras.
+    if (selectedSeed && circleId) {
+      try {
+        const { data: ch } = await supabase
+          .from('circle_homes')
+          .select('home_id')
+          .eq('circle_id', circleId)
+          .eq('status', 'active')
+          .limit(1)
+        const homeId = ch?.[0]?.home_id
+        if (homeId) {
+          if (selectedSeed.stories) {
+            await supabase
+              .from('homes')
+              .update({ stories: selectedSeed.stories })
+              .eq('id', homeId)
+          }
+          const sys = []
+          if (selectedSeed.hvac_type)
+            sys.push({ home_id: homeId, system_type: 'hvac', name: selectedSeed.hvac_type })
+          if (selectedSeed.roof_type)
+            sys.push({ home_id: homeId, system_type: 'roof', name: selectedSeed.roof_type })
+          if (sys.length) await supabase.from('home_systems').insert(sys)
+        }
+      } catch {
+        /* extras are convenience only — ignore */
+      }
     }
 
     await reloadCircles()
@@ -142,15 +222,48 @@ export default function Onboarding() {
             : 'Tell us about your home'}
         </h1>
         <p className="auth-subtitle">
-          This takes about 5 minutes. You can add more details later.
+          {selectedSeed
+            ? 'We found your home — does this look right? Edit anything that’s off.'
+            : 'Start typing your address — we may already have your home on file.'}
         </p>
 
         {error && <div className="auth-error">{error}</div>}
+        {selectedSeed && (
+          <div className="auth-notice">
+            ✓ Matched from county records. Pre-filled below — please confirm.
+          </div>
+        )}
 
         <form onSubmit={handleComplete}>
           <label className="form-label">
             Street address
-            <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} required className="form-input" placeholder="123 Main St" />
+            <div className="seed-combo">
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => onAddressChange(e.target.value)}
+                required
+                className="form-input"
+                placeholder="123 Main St"
+                autoComplete="off"
+              />
+              {suggestions.length > 0 && (
+                <ul className="seed-suggest">
+                  {suggestions.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        className="seed-option"
+                        onClick={() => selectSeed(s)}
+                      >
+                        <span className="seed-addr">{s.address_line1}</span>
+                        <span className="seed-meta">{s.city}, {s.state} {s.zip}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </label>
 
           <div className="form-row form-row-3">

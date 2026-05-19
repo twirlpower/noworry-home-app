@@ -73,8 +73,9 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ### Pillar 1 — The Home
 - ✅ Home profile view and edit
+- ✅ Address autocomplete from county assessor data (home_seeds, ~368K Arapahoe/Douglas homes) — onboarding full-text search + "We found your home" confirm; prefills year/sqft/beds/baths, creates HVAC + roof home_systems; no migration (reads as authenticated, RLS v2 covers the system inserts)
 - ✅ Home systems list (add, edit, remove systems) — add/edit/remove live & smoke-tested (remove = soft-delete via is_active, covered by RLS v2 update)
-- ⬜ Maintenance calendar (auto-generated from system data + templates) — view + RLS live; generation RPC + seeded CO templates written (migrations/004, explicit-RPC strategy), deploy pending
+- ✅ Maintenance calendar (auto-generated from system data + templates) — view + RLS + generate_maintenance_for_home RPC (migrations/004) deployed & smoke-tested (step 8 green); seeded CO templates
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.) — page + 13-item checklist with completion % built; migrations/005 (table + Pillar-1 RLS) deploy pending
 - ✅ Home health score (simple traffic-light dashboard) — scoring lib + traffic-light widget with factor breakdown, wired into the dashboard
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)

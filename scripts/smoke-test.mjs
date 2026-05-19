@@ -194,6 +194,19 @@ const inviteEmail = `invite+${stamp}@noworry-home.test`
   }
 }
 
+// 11. home_seeds address autocomplete (read as authenticated, GIN full-text).
+console.log('11. home_seeds search (onboarding autocomplete)')
+{
+  const { data: seeds, error: seErr } = await supabase
+    .from('home_seeds')
+    .select('address_line1, year_built, square_feet, hvac_type, roof_type')
+    .textSearch('address_line1', 'main:*')
+    .limit(3)
+  if (seErr) bad(`home_seeds search failed: ${seErr.code} ${seErr.message}`)
+  else if (!seeds?.length) bad('home_seeds search returned 0 rows (RLS? index?)')
+  else ok(`home_seeds searchable (${seeds.length} matches, e.g. "${seeds[0].address_line1}")`)
+}
+
 console.log(
   process.exitCode
     ? '\n✗ SMOKE TEST FAILED — see above.'
