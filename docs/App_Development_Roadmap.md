@@ -77,6 +77,7 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 - ⬜ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
 - ⬜ Home health score (simple traffic-light dashboard)
 - ⬜ Seasonal maintenance reminders (Colorado-specific templates)
+- ⬜ DIY maintenance checklist — seasonal task list with simple instructions for free tier users. Scales to enhanced (Organized), vendor-handled (Peace of Mind), and concierge-managed (Total Care) at higher tiers. This is the natural upgrade trigger from free to paid.
 
 ### Core Platform
 - ⬜ Dashboard: home health score + upcoming maintenance + recent activity
