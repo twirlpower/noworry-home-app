@@ -66,7 +66,7 @@ export default function HomeProfile() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [addingSystem, setAddingSystem] = useState(false)
+  const [sysEditId, setSysEditId] = useState(null) // null=closed, 'new'=add, <uuid>=edit
   const [sysForm, setSysForm] = useState(SYS_EMPTY)
   const [sysSaving, setSysSaving] = useState(false)
   const [sysError, setSysError] = useState('')
@@ -175,11 +175,25 @@ export default function HomeProfile() {
   function openAddSystem() {
     setSysForm(SYS_EMPTY)
     setSysError('')
-    setAddingSystem(true)
+    setSysEditId('new')
   }
 
-  function cancelAddSystem() {
-    setAddingSystem(false)
+  function openEditSystem(s) {
+    setSysForm({
+      system_type: s.system_type ?? '',
+      name: s.name ?? '',
+      brand: s.brand ?? '',
+      model: s.model ?? '',
+      install_date: s.install_date ?? '',
+      location_in_home: s.location_in_home ?? '',
+      notes: s.notes ?? '',
+    })
+    setSysError('')
+    setSysEditId(s.id)
+  }
+
+  function closeSystemForm() {
+    setSysEditId(null)
     setSysError('')
   }
 
@@ -193,13 +207,18 @@ export default function HomeProfile() {
     setSystems(data ?? [])
   }
 
-  async function handleAddSystem(e) {
+  function sysRlsMessage(message) {
+    return /row-level security|permission denied/i.test(message)
+      ? 'Could not save — the home_systems security policy is not deployed. Run docs/rls_policies_v2.sql in Supabase.'
+      : message
+  }
+
+  async function handleSaveSystem(e) {
     e.preventDefault()
     setSysError('')
     setSysSaving(true)
 
-    const { error: insErr } = await supabase.from('home_systems').insert({
-      home_id: home.id,
+    const payload = {
       system_type: sysForm.system_type,
       name: sysForm.name,
       brand: sysForm.brand || null,
@@ -207,21 +226,39 @@ export default function HomeProfile() {
       install_date: sysForm.install_date || null,
       location_in_home: sysForm.location_in_home || null,
       notes: sysForm.notes || null,
-    })
+    }
 
-    if (insErr) {
-      const rls = /row-level security|permission denied/i.test(insErr.message)
-      setSysError(
-        rls
-          ? 'Could not save — the home_systems security policy is not deployed yet. Run docs/rls_policies_v2.sql in Supabase.'
-          : insErr.message
-      )
+    const { error: saveErr } =
+      sysEditId === 'new'
+        ? await supabase
+            .from('home_systems')
+            .insert({ home_id: home.id, ...payload })
+        : await supabase
+            .from('home_systems')
+            .update(payload)
+            .eq('id', sysEditId)
+
+    if (saveErr) {
+      setSysError(sysRlsMessage(saveErr.message))
       setSysSaving(false)
       return
     }
 
     setSysSaving(false)
-    setAddingSystem(false)
+    setSysEditId(null)
+    await reloadSystems()
+  }
+
+  async function handleRemoveSystem(s) {
+    if (!window.confirm(`Remove "${s.name}" from your home systems?`)) return
+    const { error: rmErr } = await supabase
+      .from('home_systems')
+      .update({ is_active: false })
+      .eq('id', s.id)
+    if (rmErr) {
+      setSysError(sysRlsMessage(rmErr.message))
+      return
+    }
     await reloadSystems()
   }
 
@@ -402,15 +439,18 @@ export default function HomeProfile() {
       <div className="profile-card">
         <div className="card-header">
           <h3>Home Systems</h3>
-          {canEdit && !addingSystem && (
+          {canEdit && sysEditId === null && (
             <button className="btn-secondary" onClick={openAddSystem}>
               Add System
             </button>
           )}
         </div>
 
-        {addingSystem && (
-          <form onSubmit={handleAddSystem} className="system-add-form">
+        {sysEditId !== null && (
+          <form onSubmit={handleSaveSystem} className="system-add-form">
+            <h4 className="form-subhead">
+              {sysEditId === 'new' ? 'Add a system' : 'Edit system'}
+            </h4>
             {sysError && <div className="auth-error">{sysError}</div>}
             <div className="form-row">
               <label className="form-label">
@@ -450,34 +490,46 @@ export default function HomeProfile() {
               <textarea value={sysForm.notes} onChange={(e) => setSysField('notes', e.target.value)} className="form-input" rows={2} />
             </label>
             <button type="submit" className="btn-primary-full" disabled={sysSaving}>
-              {sysSaving ? 'Saving…' : 'Save System'}
+              {sysSaving ? 'Saving…' : sysEditId === 'new' ? 'Add System' : 'Save Changes'}
             </button>
-            <button type="button" className="btn-back" onClick={cancelAddSystem} disabled={sysSaving}>
+            <button type="button" className="btn-back" onClick={closeSystemForm} disabled={sysSaving}>
               Cancel
             </button>
           </form>
         )}
 
-        {systems.length === 0 ? (
-          !addingSystem && (
-            <p className="page-placeholder">
-              No systems added yet. Track your HVAC, water heater, roof, and
-              appliances here to get maintenance reminders.
-            </p>
-          )
-        ) : (
-          <ul className="systems-list">
-            {systems.map((s) => (
-              <li key={s.id} className="system-row">
-                <span className="system-name">{s.name}</span>
-                <span className="system-meta">
-                  {s.system_type?.replace(/_/g, ' ')}
-                  {s.location_in_home ? ` · ${s.location_in_home}` : ''}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        {systems.length === 0
+          ? sysEditId === null && (
+              <p className="page-placeholder">
+                No systems added yet. Track your HVAC, water heater, roof, and
+                appliances here to get maintenance reminders.
+              </p>
+            )
+          : sysEditId === null && (
+              <ul className="systems-list">
+                {systems.map((s) => (
+                  <li key={s.id} className="system-row">
+                    <div className="system-main">
+                      <span className="system-name">{s.name}</span>
+                      <span className="system-meta">
+                        {s.system_type?.replace(/_/g, ' ')}
+                        {s.location_in_home ? ` · ${s.location_in_home}` : ''}
+                      </span>
+                    </div>
+                    {canEdit && (
+                      <div className="system-actions">
+                        <button className="btn-link" onClick={() => openEditSystem(s)}>
+                          Edit
+                        </button>
+                        <button className="btn-link btn-link-danger" onClick={() => handleRemoveSystem(s)}>
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
       </div>
     </div>
   )

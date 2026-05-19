@@ -585,12 +585,57 @@ textarea.form-input {
 
 .system-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.8rem 1rem;
   border: 1px solid var(--cool);
   border-radius: var(--radius-sm);
   background: var(--off-white);
+}
+
+.system-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.system-actions {
+  display: flex;
+  gap: 0.9rem;
+  flex-shrink: 0;
+}
+
+.btn-link {
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--blue);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.btn-link:hover {
+  color: var(--teal);
+}
+
+.btn-link-danger {
+  color: var(--red);
+}
+
+.btn-link-danger:hover {
+  color: var(--red);
+  text-decoration: underline;
+}
+
+.form-subhead {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.9rem;
 }
 
 .system-name {

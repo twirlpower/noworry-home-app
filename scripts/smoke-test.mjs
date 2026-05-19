@@ -85,8 +85,24 @@ if (homeId) {
   else {
     const { data: sys } = await supabase
       .from('home_systems').select('*').eq('home_id', homeId)
-    if (sys?.length) ok(`home_systems insert+read ok (${sys[0].name})`)
-    else bad('home_systems inserted but not visible under RLS')
+    if (!sys?.length) bad('home_systems inserted but not visible under RLS')
+    else {
+      ok(`home_systems insert+read ok (${sys[0].name})`)
+      const id = sys[0].id
+      // Edit (UPDATE) — same v2 update policy as remove.
+      const { error: edErr } = await supabase
+        .from('home_systems').update({ name: 'Smoke Test Furnace (edited)' }).eq('id', id)
+      if (edErr) bad(`home_systems edit blocked: ${edErr.message}`)
+      else ok('home_systems edit ok')
+      // Remove = soft-delete (is_active=false), then confirm it drops from the active list.
+      const { error: rmErr } = await supabase
+        .from('home_systems').update({ is_active: false }).eq('id', id)
+      const { data: act } = await supabase
+        .from('home_systems').select('id').eq('home_id', homeId).eq('is_active', true)
+      if (rmErr) bad(`home_systems remove blocked: ${rmErr.message}`)
+      else if (act?.length) bad('home_systems soft-removed but still in active list')
+      else ok('home_systems remove (soft-delete) ok')
+    }
   }
 } else bad('skipped — no home id')
 
@@ -115,7 +131,8 @@ console.log(
 console.log(
   `\nCleanup (run in Supabase SQL Editor, in this order):\n` +
   `  delete from scheduled_maintenance where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
-  `  delete from home_systems where name = 'Smoke Test Furnace';\n` +
+  `  delete from home_systems where home_id in (select home_id from circle_homes where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle'));\n` +
+  `  delete from circle_homes where circle_id in (select id from family_circles where name = 'Smoke Test Home Circle');\n` +
   `  delete from family_circles where name = 'Smoke Test Home Circle';\n` +
   `  delete from auth.users where email = '${email}';\n` +
   `  delete from persons where email = '${email}';`
