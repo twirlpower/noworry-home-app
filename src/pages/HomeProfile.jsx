@@ -247,6 +247,14 @@ export default function HomeProfile() {
     setSysSaving(false)
     setSysEditId(null)
     await reloadSystems()
+    await regenMaintenance()
+  }
+
+  // Best-effort: keep scheduled_maintenance in sync after a system changes.
+  // Silent on failure (migration 004 may not be deployed; the Maintenance
+  // page also exposes a manual refresh).
+  async function regenMaintenance() {
+    if (home) await supabase.rpc('generate_maintenance_for_home', { p_home_id: home.id })
   }
 
   async function handleRemoveSystem(s) {
@@ -260,6 +268,7 @@ export default function HomeProfile() {
       return
     }
     await reloadSystems()
+    await regenMaintenance()
   }
 
   if (!activeCircle) {

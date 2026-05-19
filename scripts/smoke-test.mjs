@@ -123,6 +123,29 @@ console.log('7. scheduled_maintenance insert + read (RLS v2)')
   }
 }
 
+// 8. Migration 004 — generate_maintenance_for_home from seeded templates.
+console.log('8. generate_maintenance_for_home (migration 004)')
+if (homeId) {
+  // Fresh active system (step 6 soft-deleted the first one).
+  await supabase.from('home_systems').insert({
+    home_id: homeId, system_type: 'hvac', name: 'Smoke Test Furnace 2',
+  })
+  const { data: made, error: genErr } = await supabase.rpc(
+    'generate_maintenance_for_home', { p_home_id: homeId })
+  if (genErr) {
+    const missing = /could not find the function|PGRST202/i.test(genErr.message)
+    bad(missing
+      ? 'generate_maintenance_for_home not deployed — run migrations/004_maintenance_templates.sql'
+      : `generate RPC failed: ${genErr.message}`)
+  } else {
+    const { data: gen } = await supabase
+      .from('scheduled_maintenance')
+      .select('*').eq('circle_id', circleId).not('template_id', 'is', null)
+    if (gen?.length) ok(`generated ${made} item(s); ${gen.length} template-linked rows present`)
+    else bad('RPC returned but no template-linked scheduled rows found')
+  }
+} else bad('skipped — no home id')
+
 console.log(
   process.exitCode
     ? '\n✗ SMOKE TEST FAILED — see above.'
