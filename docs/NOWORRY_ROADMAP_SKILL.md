@@ -57,6 +57,25 @@ These documents define the platform architecture. Read them before making struct
 - **Brand Guidelines v1.0**: Colors, typography, voice, accessibility standards
 - **SQL Schema v1.0**: 19 tables, all enums, RLS enabled
 
+## Database Migrations
+
+All SQL migrations (schema, RLS policies, functions, triggers, seed data) live
+in a top-level `migrations/` folder in the repo — **not** in `docs/`. Name them
+in run order, e.g. `001_schema.sql`, `002_rls_v1.sql`, `003_rls_v2.sql`.
+
+`docs/` is for documentation only (specs, roadmap, this skill).
+
+When you write a new migration:
+- Create it under `migrations/`
+- Make it idempotent where practical (drop-if-exists before create)
+- Note in the roadmap that it is written vs. deployed (the user runs SQL in
+  the Supabase SQL Editor; deployment is not automatic)
+
+One-time exception: the pre-existing files committed before this convention —
+`docs/noworry_home_schema_v1.0.sql`, `docs/rls_policies_v1.sql`,
+`docs/rls_policies_v2.sql` — stay in `docs/` as-is. Do not move them; only new
+migrations follow the `migrations/` rule.
+
 ## Current Stack
 
 - **Database**: Supabase (new project, separate from HomeKeep/TwirlPower)
