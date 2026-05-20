@@ -67,10 +67,12 @@ export default async function handler(req, res) {
     if (due.length === 0) continue
 
     // 2. Find a reachable recipient. Disambiguated embed via persons!person_id
-    //    (same PGRST201 pattern used elsewhere in the codebase).
+    //    (same PGRST201 pattern used elsewhere in the codebase). auth_id is
+    //    included so we can fall back to the auth.users record when the
+    //    persons.email column is null but the user has an auth account.
     const { data: members, error: memberErr } = await supabase
       .from('circle_memberships')
-      .select('role, persons:persons!person_id (email, first_name)')
+      .select('role, persons:persons!person_id (email, first_name, auth_id)')
       .eq('circle_id', c.id)
       .eq('status', 'active')
       .in('role', ['circle_manager', 'home_owner', 'care_partner'])
@@ -81,12 +83,40 @@ export default async function handler(req, res) {
       continue
     }
 
-    const reachable = (members ?? [])
-      .filter((m) => m.persons?.email)
-      .sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99))
+    // Resolve in priority order, stopping at the first reachable member.
+    // First try persons.email (cheap, no extra round trip); only fall back
+    // to auth.admin.getUserById(auth_id) when that's null but the user has
+    // an auth account. Catches edge cases where persons.email was cleared
+    // post-signup or diverged from the auth-stored address.
+    const sorted = (members ?? []).sort(
+      (a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99)
+    )
 
-    const target = reachable[0]
-    if (!target) {
+    let target = null
+    let resolvedEmail = null
+    for (const m of sorted) {
+      const p = m.persons
+      if (!p) continue
+      if (p.email) {
+        target = m
+        resolvedEmail = p.email
+        break
+      }
+      if (p.auth_id) {
+        const { data: au, error: authErr } = await supabase.auth.admin.getUserById(p.auth_id)
+        if (authErr) {
+          console.error(`Trial cron: auth lookup failed for ${p.auth_id}:`, authErr)
+          continue
+        }
+        if (au?.user?.email) {
+          target = m
+          resolvedEmail = au.user.email
+          break
+        }
+      }
+    }
+
+    if (!target || !resolvedEmail) {
       actions.push({ circle: c.id, status: 'no_reachable_recipient' })
       continue
     }
@@ -101,7 +131,7 @@ export default async function handler(req, res) {
       try {
         await resend.emails.send({
           from: fromEmail,
-          to: target.persons.email,
+          to: resolvedEmail,
           subject: subjectFor(key),
           html: htmlFor(key, {
             firstName: target.persons.first_name,
@@ -110,9 +140,9 @@ export default async function handler(req, res) {
           }),
         })
         updated[key] = stampIso
-        actions.push({ circle: c.id, key, to: target.persons.email, status: 'sent' })
+        actions.push({ circle: c.id, key, to: resolvedEmail, status: 'sent' })
       } catch (err) {
-        console.error(`Trial cron: send ${key} → ${target.persons.email} failed:`, err)
+        console.error(`Trial cron: send ${key} → ${resolvedEmail} failed:`, err)
         actions.push({ circle: c.id, key, status: 'send_failed', error: err?.message })
       }
     }
