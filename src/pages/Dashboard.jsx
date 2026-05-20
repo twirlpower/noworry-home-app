@@ -27,7 +27,7 @@ function formatDue(dateStr) {
 
 export default function Dashboard() {
   const { person } = useAuth()
-  const { activeCircle, membership } = useCircle()
+  const { activeCircle, membership, applyCircleUpdate } = useCircle()
   const personId = person?.id
 
   const [loading, setLoading] = useState(true)
@@ -53,6 +53,45 @@ export default function Dashboard() {
   function dismissReveal() {
     window.localStorage.setItem('preparedRevealDismissed', 'true')
     setRevealDismissed(true)
+  }
+
+  const [trialLoading, setTrialLoading] = useState(false)
+  const [trialError, setTrialError] = useState('')
+
+  // Flip the active circle to Prepared and stamp a 30-day trial window.
+  // Spec said `circles` — real table is `family_circles`. The reveal
+  // unmounts as soon as the local cache shows subscription_tier='prepared'
+  // (showReveal is derived from that field), so we apply the immutable
+  // CircleContext patch right after the DB write rather than waiting on
+  // a re-fetch. circles_update RLS already gates this to Family-write
+  // roles, so the server enforces who's allowed to start the trial.
+  async function handleStartTrial() {
+    if (!activeCircle) return
+    setTrialError('')
+    setTrialLoading(true)
+
+    const startedAt = new Date().toISOString()
+    const endsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    const patch = {
+      subscription_tier: 'prepared',
+      trial_started_at: startedAt,
+      trial_ends_at: endsAt,
+    }
+
+    const { error: trialErr } = await supabase
+      .from('family_circles')
+      .update(patch)
+      .eq('id', activeCircle.id)
+
+    if (trialErr) {
+      console.error('Trial activation failed:', trialErr)
+      setTrialError('Something went wrong. Please try again.')
+      setTrialLoading(false)
+      return
+    }
+
+    applyCircleUpdate(activeCircle.id, patch)
+    setTrialLoading(false)
   }
 
   useEffect(() => {
@@ -163,9 +202,10 @@ export default function Dashboard() {
           score={health?.score ?? 0}
           hasFamily={hasFamily}
           hasPlanItems={hasPlanItems}
-          // Wired to console for this task; trial flow lands in the next one.
-          onStartTrial={() => console.log('trial started')}
+          onStartTrial={handleStartTrial}
           onDismiss={dismissReveal}
+          loading={trialLoading}
+          error={trialError}
         />
       )}
 

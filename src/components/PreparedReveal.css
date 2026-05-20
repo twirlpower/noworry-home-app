@@ -198,6 +198,28 @@
   outline-offset: 2px;
 }
 
+/* Loading + error states. The conversion UI is otherwise red-free per spec;
+   error feedback is the deliberate exception (accessibility outweighs the
+   no-alarm-red rule when something actually failed). Uses --red-text — the
+   palette's WCAG-on-tints red variant — not the harsher --red accent. */
+.pr-cta[disabled] {
+  background: #5A7A40;            /* desaturated green, still readable */
+  cursor: progress;
+}
+
+.pr-dismiss[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pr-error {
+  margin-top: 0.7rem;
+  font-size: 13px;
+  color: var(--red-text);
+  font-weight: 600;
+  text-align: center;
+}
+
 .pr-fine-print {
   font-size: 13px;
   color: var(--muted);

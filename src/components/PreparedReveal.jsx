@@ -6,8 +6,12 @@ import './PreparedReveal.css'
 //   score        — integer 0–100
 //   hasFamily    — boolean; any other circle member with status active|invited
 //   hasPlanItems — boolean; any documents OR emergency_contacts row
-//   onStartTrial — () => void (CTA)
+//   onStartTrial — () => Promise<void> | void (CTA — Dashboard handles the
+//                  tier flip; this component just reflects pending/error)
 //   onDismiss    — () => void ("Remind me later")
+//   loading      — boolean; CTA shows "Starting your trial…" + disabled
+//   error        — string; non-empty renders an accessible-red message
+//                  under the CTA (the only red in this UI, per spec)
 //
 // SVG ring math: stroke-dasharray = 314 (≈ 2πr for r=50), dashoffset shrinks
 // linearly with score so 100 = full ring, 0 = empty. -90° rotation starts
@@ -18,6 +22,8 @@ export default function PreparedReveal({
   hasPlanItems,
   onStartTrial,
   onDismiss,
+  loading = false,
+  error = '',
 }) {
   const safeScore = Math.max(0, Math.min(100, Math.round(score ?? 0)))
   const dashoffset = 314 * (1 - safeScore / 100)
@@ -89,15 +95,29 @@ export default function PreparedReveal({
           <li>Share tasks so nothing falls through the cracks</li>
           <li>Record your wishes and preferences — in your words</li>
         </ul>
-        <button type="button" className="pr-cta" onClick={onStartTrial}>
-          Try Prepared free for 30 days
+        <button
+          type="button"
+          className="pr-cta"
+          onClick={onStartTrial}
+          disabled={loading}
+          aria-busy={loading || undefined}
+        >
+          {loading ? 'Starting your trial…' : 'Try Prepared free for 30 days'}
         </button>
+        {error && (
+          <p className="pr-error" role="alert">{error}</p>
+        )}
         <p className="pr-fine-print">
           $12/mo after your trial · Cancel anytime · No pressure
         </p>
       </div>
 
-      <button type="button" className="pr-dismiss" onClick={onDismiss}>
+      <button
+        type="button"
+        className="pr-dismiss"
+        onClick={onDismiss}
+        disabled={loading}
+      >
         Remind me later
       </button>
     </section>
