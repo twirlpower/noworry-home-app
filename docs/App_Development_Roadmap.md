@@ -1,130 +1,150 @@
 # NoWorry Home — App Development Roadmap
 
-Updated: May 19, 2026 · v1.2
+Updated: May 20, 2026 — v1.4.1 (Board of Directors review)
 
 ---
 
 ## Vision
 
-A generational aging-in-place platform built on the Family Graph architecture. The family — not the individual — is the customer. Start with a free Aware tier that works anywhere, expand to full-service coordination in active markets.
+A generational aging-in-place platform built on the Family Graph architecture. The family — not the individual — is the customer. Aware (free) is the lead funnel. Prepared ($12/mo) is the real offer. Covered and Complete are the upsell story told later.
 
 ---
 
 ## Architecture Decisions
 
 - **Three independent entities**: Person, Home, Family Circle (see Family Graph Spec v1.0)
-- **Seven roles**: Home Owner, Circle Manager, Care Partner, Service Partner, Helper, Family Member, Trusted Advisor
+- **Seven roles**: Circle Manager, Care Coordinator, Trusted Contact, Family Member, Professional Advisor, Emergency Contact, View Only
 - **Proxy accounts**: Home Owners who never log in — managed by Circle Manager
 - **Circle isolation**: absolute privacy between circles, no data bridge
 - **Permanent home record**: Carfax-for-homes — persists across ownership
 - **Stack**: Supabase (PostgreSQL + Auth + Storage) → Vercel (hosting) → GitHub (code)
-- **Schema**: 19 tables, RLS enabled, all enums use customer-facing names
+- **Schema**: 20 tables, RLS enabled — key gotchas: `subscription_tier` (not `tier`), `circle_memberships` (not `circle_members`), `person_id` (not `user_id`)
+- **Supabase ref**: hyqurxvuxhwjeqxchuuz.supabase.co
+- **Local dev**: `C:\Users\tyeol\noworry-home-app` — `npm run dev -- --host`
+
+---
+
+## Success Milestones
+
+Track these explicitly. Everything else is inputs.
+
+- ⬜ First Aware signup (organic)
+- ⬜ First 10 Aware signups
+- ⬜ First Aware → Prepared trial conversion
+- ⬜ First family member invited by a member ← leading indicator of family value prop
+- ⬜ First paying member (trial → paid)
+- ⬜ First 5 paying members
+- ⬜ First referral partner activated
+- ⬜ First vendor signed
+- ⬜ First vendor dispatch
+- ⬜ CAC recovered in 30 days (organic/referral only)
 
 ---
 
 ## What's Built
 
 ### Infrastructure
-- ✅ Supabase project created
+- ✅ Supabase project created and configured
 - ✅ GitHub repo created (twirlpower/noworry-home-app)
-- ✅ Vercel project created
-- ✅ Family Graph Spec v1.0 complete
-- ✅ SQL schema v1.0 written (19 tables)
-- ✅ SQL schema deployed to Supabase
-- ✅ Supabase Auth configured
-- ✅ Supabase env vars added to Vercel
-- ✅ RLS policies written and deployed (rls_v1, rls_v2, 007 notif prefs, 009 tasks)
-- ⬜ Storage buckets created (documents, avatars, proof-of-ownership)
+- ✅ Vercel project with auto-deploy from GitHub
+- ✅ SQL schema v1.0 deployed (20 tables)
+- ✅ RLS policies v1 + v2 deployed (7 tables)
+- ✅ Migrations 003–008 deployed
+- ✅ 301,218 home seeds imported (Arapahoe + Douglas County)
+- ✅ Supabase Auth configured (email/password)
+- ✅ Vercel env vars configured
+- ✅ vercel.json SPA routing fix deployed
+- ⬜ RLS for remaining 13 tables
+- ⬜ Supabase storage buckets (documents, avatars, proof-of-ownership)
+- ⬜ Custom domain (app.noworry-home.com) — **OVERDUE**
 
-### Marketing Site
-- ✅ Homepage built (index.html)
-- ✅ Denver/Aurora location page built (locations-denver.html)
-- ⬜ Marketing site deployed to Vercel
-- ⬜ Privacy policy page
-- ⬜ Terms of service page
-- ⬜ Contact form
-- ⬜ About page
+### Marketing Site — 8 Pages Complete
+- ✅ Homepage, Services, About, Aurora/Denver location, Vendors, Privacy, Terms, Contact
+- ⬜ Create marketing site repo (twirlpower/noworry-home-site)
+- ⬜ Deploy to Vercel — **OVERDUE — must ship before first member conversation**
 
-### App Shell + Onboarding
-- ✅ Project scaffolding (React + Vite + React Router)
-- ✅ App layout: nav, circle switcher, main content area
-- ✅ Supabase client initialization
-- ✅ Auth: signup, login, logout, password reset
-- ✅ Auth: email verification flow
-- ✅ Protected route logic (redirect to login if not authenticated)
-- ✅ Circle switcher UI (for multi-circle users)
-- ✅ First screen: "Setting up for myself" vs "Setting up for someone else"
-- ✅ Path A: Self-setup → create account → create home profile → auto-create circle
-- ✅ Path B: Setting up for someone else → create account → create proxy Home Owner → create home profile → auto-create circle
-- ✅ Home profile form: address, year built, square footage, systems
-- ✅ Invite family members flow (optional, skippable)
-- ⬜ Designate successor prompt (optional, skippable)
+### Vendor Materials — Complete
+- ✅ Vendor one-pager pitch
+- ✅ Vendor flat rate card (v1.0, 22 services, 5 categories)
+- ✅ Vendor partner agreement (11 clauses)
+
+### Family Graph Specification — v1.0 Complete
+- ✅ 16-section architecture document
+- ✅ Three entities, seven roles, circle isolation, permanent home record, control transfer protocols
 
 ---
 
-## Phase 1: Aware (Free Tier) — Complete ✅
+## Phase 1: Aware Tier (Free) — COMPLETE
 
 ### Pillar 1 — The Home
 - ✅ Home profile view and edit
-- ✅ Home systems list (add, edit, remove systems)
-- ✅ Maintenance calendar (auto-generated from system data + templates)
-- ✅ Safety checklist (grab bars, smoke detectors, trip hazards, etc.)
-- ✅ Home health score (simple traffic-light dashboard)
-- ✅ Seasonal maintenance reminders (Colorado-specific templates)
-- ⬜ DIY maintenance checklist — seasonal task list with simple instructions for free tier users. Scales to enhanced (Prepared), vendor-handled (Covered), and concierge-managed (Complete) at higher tiers. This is the natural upgrade trigger from free to paid.
+- ✅ Home systems (add, edit, soft-delete) with HVAC/roof auto-creation from seeds
+- ✅ Maintenance calendar (auto-generated via RPC + Colorado seasonal templates)
+- ✅ Safety checklist with completion tracking
+- ✅ Home health score (weighted: system age, overdue maint, safety, profile)
+- ✅ Seasonal DIY maintenance guide
 
 ### Core Platform
-- ✅ Dashboard: home health score + upcoming maintenance + recent activity
-- ✅ Settings: profile, notification preferences, circle management
-- ✅ Mobile responsive (senior-first: large text, high contrast, simple nav)
-- ✅ Accessibility audit (WCAG 2.1 AA minimum)
+- ✅ Auth: signup, login, logout, password reset
+- ✅ Dual-path onboarding (for myself vs for someone else)
+- ✅ Proxy account support for non-tech homeowners
+- ✅ Address autocomplete from 301K seeds
+- ✅ Dashboard wired to real data
+- ✅ Family invitation flow (roster + invite, status=invited)
+- ✅ Circle switcher for multi-circle users
+- ✅ Settings page (profile, notifications, circle rename)
+- ✅ Tier labels and taglines (tiers.js)
+- ✅ Mobile responsive (senior-first: large text, high contrast)
+- ✅ WCAG 2.1 AA accessibility pass
+- ✅ Smoke test suite: 12 steps all green
 
 ---
 
-## Phase 2: Prepared Tier (Paid Digital) — **Active Sprint**
+## Phase 2: Prepared Tier ($12/mo) — IN PROGRESS
 
-> *Your plans organized, your family coordinated.*
+Phase 2 is split into three tracks. Run revenue and activation in parallel. Feature track starts after revenue is solid.
 
-### Pillar 2 — The Plan
-- ✅ Document vault (upload, organize, tag by type)
-- ✅ Document checklist (will, POA, insurance, deed — shows gaps)
-- ⬜ Emergency contacts list (ordered by priority)
-- ⬜ Financial access planning (who has access to what)
-- ⬜ Wishes and preferences
+### Revenue Track — do first
+- ✅ Aware→Prepared reveal moment (score gap visualization) — commit e37eaa5
+- ⬜ Trial activation — flip `subscription_tier` from `aware` to `prepared` on CTA click
+- ⬜ Email trial drip sequence — day 1 welcome, day 7 nudge, day 14 check-in, day 28 expiry warning
+- ⬜ Stripe integration — subscription management, upgrade, downgrade, cancel
+- ⬜ Trial expiration handler — day 31 payment collection, grace period, downgrade if unpaid
 
-### Pillar 3 — The Family
-- ⬜ Family member invitation flow (email + role assignment)
-- ⬜ Role management (Circle Manager can change roles)
-- ✅ Task management (create, assign, complete)
-- ⬜ Task comments and activity feed
-- ⬜ Notes and family updates feed
-- ⬜ Permission visibility ("you can see X, you cannot see Y")
+### Activation Track — parallel with revenue track
+- ⬜ Emergency contacts — prioritized list (fast to build, high perceived value)
+- ⬜ RLS policy for `emergency_contacts` table
+- ⬜ Invite family during onboarding (post-home-profile step, skippable)
+
+### Feature Track — after revenue + activation are solid
+- ⬜ Supabase storage bucket (prerequisite for document vault)
+- ⬜ Document vault (upload, organize, tag by type)
+- ⬜ Document readiness checklist (will, POA, insurance, deed — shows gaps)
+- ⬜ Task management (create, assign, complete, comment)
+- ⬜ Family notes and updates feed
 - ⬜ Family dashboard (who's active, what's pending)
 - ⬜ Prompt engine v1 (home-triggered: system age alerts)
-
-### Billing
-- ⬜ Stripe integration
-- ⬜ Subscription management (upgrade, downgrade, cancel)
-- ⬜ Family Group billing (multi-circle discounts)
+- ⬜ Admin view — trial monitor, conversion funnel (low priority)
+- ⬜ Email verification flow (proper check-your-email screen)
 
 ---
 
-## Phase 3: Covered + Complete (Paid Local)
+## Phase 3: Covered + Complete (Paid Local) — PLANNED
 
 ### Vendor Dispatch
 - ⬜ Vendor directory (internal, admin-managed)
-- ⬜ Service request flow (member requests → admin reviews → vendor dispatched)
+- ⬜ Service request flow (member → admin → vendor)
 - ⬜ Service tracking (scheduled, in-progress, complete)
 - ⬜ Vendor follow-up and rating
 - ⬜ Service history tied to home record
 
 ### Vendor Portal
 - ⬜ Vendor login and dashboard
-- ⬜ Employee management — add/remove employees, each triggers $49 background check fee (auto-charged)
-- ⬜ Credential management — upload/maintain licenses, COI, business registration with expiration tracking
-- ⬜ Job assignment — vendor specifies which employee(s) will work each job before dispatch
-- ⬜ Pre-visit notification — system sends member the name and photo of the person arriving before each visit
-- ⬜ Job completion reporting — vendor marks complete, adds notes/photos through portal
+- ⬜ Employee management (add/remove triggers $49 auto-charge)
+- ⬜ Credential management (licenses, COI, expiration tracking)
+- ⬜ Job assignment (specify employee before dispatch)
+- ⬜ Pre-visit notification (member gets tech name + photo)
+- ⬜ Job completion reporting
 - ⬜ Payment history and upcoming work view
 
 ### Pillar 4 — Continuity
@@ -153,10 +173,53 @@ A generational aging-in-place platform built on the Family Graph architecture. T
 
 ---
 
-## Open Questions
+## Business — Parallel Track
 
-- Mobile: responsive web first, or native app consideration?
-- Offline capability: service worker for core features?
-- Notification delivery: email-first, then SMS, then push?
-- Maintenance template seed data: how many templates for Colorado launch?
-- Admin panel: separate app or role-gated views within the same app?
+Run these alongside app dev. Do not wait for the app to be feature-complete.
+
+### Immediate — before first member conversation
+- ⬜ Set up email addresses (hello@, support@, vendors@)
+- ⬜ Deploy marketing site to Vercel
+- ⬜ Set up app.noworry-home.com custom domain
+
+### Vendor recruitment (starts now — long lead time)
+- ⬜ Contact first 5 vendor candidates (warm outreach)
+- ⬜ First vendor conversation completed
+- ⬜ First flat rate card validated with real vendor
+- ⬜ First vendor credentialed and background checked
+- ⬜ First vendor signed and active
+
+### Referral partners
+- ⬜ Identify first referral partner candidate (estate attorney or Medicare agent)
+- ⬜ First referral partner conversation completed
+- ⬜ First referral partner one-pager sent and followed up
+
+### Other
+- ⬜ Legal review of privacy policy and terms (Colorado attorney)
+- ⬜ Validate flat rate card pricing with at least one vendor
+- ⬜ Build segmented view of 301K list by home age for outreach readiness
+
+---
+
+## Schema Gotchas (confirmed from real builds)
+
+| What you might write | What the DB actually has |
+|---|---|
+| `circles.tier` | `circles.subscription_tier` |
+| `circle_members` | `circle_memberships` |
+| `circle_members.user_id` | `circle_memberships.person_id` |
+
+`emergency_contacts` table has no RLS policy yet — queries return count=0 silently until migration ships.
+
+To flip Aware → Prepared: `UPDATE circles SET subscription_tier = 'prepared'`. The `circles_update` RLS policy supports this for Family-write roles — no migration needed.
+
+---
+
+## Operating Constraints
+
+Everything must be achievable alongside a full-time job. Sustainability over speed. No heroic sprints.
+
+- App dev: weekend and evening sessions in Claude + Claude Code
+- Vendor recruitment: 2–3 conversations per week maximum
+- Member outreach: leverage existing OAKRAA/TTPC relationships first
+- Lead list outreach: no mass campaigns until 50 members
