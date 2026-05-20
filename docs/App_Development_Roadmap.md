@@ -1,6 +1,6 @@
 # NoWorry Home — App Development Roadmap
 
-Updated: May 20, 2026 — v1.4.1 (Board of Directors review)
+Updated: May 20, 2026 — v1.4.2
 
 ---
 
@@ -49,19 +49,21 @@ Track these explicitly. Everything else is inputs.
 - ✅ Vercel project with auto-deploy from GitHub
 - ✅ SQL schema v1.0 deployed (20 tables)
 - ✅ RLS policies v1 + v2 deployed (7 tables)
-- ✅ Migrations 003–008 deployed
+- ✅ Migrations 003–012 deployed
 - ✅ 301,218 home seeds imported (Arapahoe + Douglas County)
 - ✅ Supabase Auth configured (email/password)
 - ✅ Vercel env vars configured
 - ✅ vercel.json SPA routing fix deployed
 - ⬜ RLS for remaining 13 tables
-- ⬜ Supabase storage buckets (documents, avatars, proof-of-ownership)
-- ⬜ Custom domain (app.noworry-home.com) — **OVERDUE**
+- ✅ Supabase storage bucket: documents
+- ⬜ Supabase storage buckets: avatars, proof-of-ownership
+- ✅ Custom domain (app.noworry-home.com)
+- ✅ Resend sending domain verified (trial drip emails)
 
 ### Marketing Site — 8 Pages Complete
 - ✅ Homepage, Services, About, Aurora/Denver location, Vendors, Privacy, Terms, Contact
-- ⬜ Create marketing site repo (twirlpower/noworry-home-site)
-- ⬜ Deploy to Vercel — **OVERDUE — must ship before first member conversation**
+- ✅ Create marketing site repo (twirlpower/noworry-home-site)
+- ✅ Deploy to Vercel
 
 ### Vendor Materials — Complete
 - ✅ Vendor one-pager pitch
@@ -104,15 +106,15 @@ Track these explicitly. Everything else is inputs.
 
 Phase 2 is split into three tracks. Run revenue and activation in parallel. Feature track starts after revenue is solid.
 
-### Revenue Track — do first
+### Revenue Track — COMPLETE
 - ✅ Aware→Prepared reveal moment (score gap visualization) — commit e37eaa5
-- ⬜ Trial activation — flip `subscription_tier` from `aware` to `prepared` on CTA click
-- ⬜ Email trial drip sequence — day 1 welcome, day 7 nudge, day 14 check-in, day 28 expiry warning
+- ✅ Trial activation — flip `subscription_tier` from `aware` to `prepared` on CTA click — commit a1722d6
+- ✅ Email trial drip sequence — day 1 welcome, day 7 nudge, day 14 check-in, day 28 expiry warning — commits b39c444, 16c252a, 717b5eb
 - ⬜ Stripe integration — subscription management, upgrade, downgrade, cancel
 - ⬜ Trial expiration handler — day 31 payment collection, grace period, downgrade if unpaid
 
 ### Activation Track — parallel with revenue track
-- ⬜ Emergency contacts — prioritized list (fast to build, high perceived value)
+- ⬜ Emergency contacts — prioritized list (fast to build, high perceived value) ← **NEXT UP**
 - ⬜ RLS policy for `emergency_contacts` table
 - ⬜ Invite family during onboarding (post-home-profile step, skippable)
 
@@ -179,8 +181,8 @@ Run these alongside app dev. Do not wait for the app to be feature-complete.
 
 ### Immediate — before first member conversation
 - ⬜ Set up email addresses (hello@, support@, vendors@)
-- ⬜ Deploy marketing site to Vercel
-- ⬜ Set up app.noworry-home.com custom domain
+- ✅ Deploy marketing site to Vercel
+- ✅ Set up app.noworry-home.com custom domain
 
 ### Vendor recruitment (starts now — long lead time)
 - ⬜ Contact first 5 vendor candidates (warm outreach)
