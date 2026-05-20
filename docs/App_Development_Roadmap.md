@@ -97,9 +97,9 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ Stripe integration + subscription management
 - ⬜ Trial expiration handler (day 31, grace period, downgrade)
 
-#### Activation Track — COMPLETE
-- ✅ Emergency contacts + RLS policy for emergency_contacts — 6772834
-- ✅ Invite family during onboarding (skippable)
+#### Activation Track — CURRENT
+- ⬜ Emergency contacts + RLS policy for emergency_contacts
+- ⬜ Invite family during onboarding (skippable)
 
 #### Feature Track
 - ⬜ Document vault (storage bucket ready)
