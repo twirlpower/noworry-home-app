@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
-import RoleSelect from '../components/RoleSelect'
 
 export default function Onboarding() {
   const location = useLocation()
@@ -16,11 +15,12 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createdCircleId, setCreatedCircleId] = useState(null)
-  const [invites, setInvites] = useState([
-    { first: '', last: '', email: '', role: 'family_member' },
-    { first: '', last: '', email: '', role: 'family_member' },
-    { first: '', last: '', email: '', role: 'family_member' },
-  ])
+  // Lightweight invite-family step (v1.5 activation track). Single email +
+  // role, success state revealed after send. `inviteSent` flips on success
+  // to show the confirmation screen.
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('family_member')
+  const [inviteSent, setInviteSent] = useState(false)
 
   // Home Owner info (for "setting up for someone else")
   const [ownerFirst, setOwnerFirst] = useState('')
@@ -166,11 +166,17 @@ export default function Onboarding() {
 
     setCreatedCircleId(circleId)
     setLoading(false)
-    setStep('invite')
-  }
 
-  function setInviteField(i, key, val) {
-    setInvites((arr) => arr.map((s, idx) => (idx === i ? { ...s, [key]: val } : s)))
+    // Auto-skip the invite step if the user has already gone through it
+    // (per-browser flag). family_circles has no onboarding_completed_at
+    // column, so localStorage is the spec-blessed fallback.
+    if (typeof window !== 'undefined' &&
+        window.localStorage.getItem('onboardingFamilyStepDone') === 'true') {
+      await finishOnboarding()
+      return
+    }
+
+    setStep('invite')
   }
 
   async function finishOnboarding() {
@@ -178,89 +184,178 @@ export default function Onboarding() {
     navigate('/dashboard')
   }
 
-  async function sendInvites() {
-    setError('')
-    setLoading(true)
-    const filled = invites.filter((s) => s.first.trim() && s.last.trim())
-    for (const s of filled) {
-      const { data: invP, error: pErr } = await supabase
-        .from('persons')
-        .insert({
-          first_name: s.first.trim(),
-          last_name: s.last.trim(),
-          email: s.email.trim() || null,
-          auth_status: 'proxy',
-          created_by: person.id,
-        })
-        .select()
-        .single()
-      if (pErr) {
-        setError(
-          /duplicate key|unique/i.test(pErr.message)
-            ? `That email for ${s.first} already has a profile — clear it, or finish and invite later from My Circle.`
-            : pErr.message
-        )
-        setLoading(false)
-        return
-      }
-      const { error: mErr } = await supabase.from('circle_memberships').insert({
-        person_id: invP.id,
-        circle_id: createdCircleId,
-        role: s.role,
-        status: 'invited',
-        invited_by: person.id,
-      })
-      if (mErr) {
-        setError(mErr.message)
-        setLoading(false)
-        return
-      }
-    }
-    await finishOnboarding()
+  // Both paths out of the invite step (skip OR send-then-dashboard) set the
+  // same flag so the step doesn't reappear if onboarding is ever re-entered.
+  function markInviteStepDone() {
+    try {
+      window.localStorage.setItem('onboardingFamilyStepDone', 'true')
+    } catch { /* ignore — Safari private mode etc. The flag is a UX nicety, not security. */ }
   }
 
-  // Step: invite family (after the circle is created, before the dashboard)
+  function skipInviteStep() {
+    markInviteStepDone()
+    finishOnboarding()
+  }
+
+  // Spec uses v1.5 role names (care_coordinator / view_only) that aren't in
+  // the circle_role enum yet. Map them to the closest existing values for
+  // the DB write; the UI shows the v1.5 labels. Update this map when the
+  // enum migration ships.
+  const ROLE_DB_VALUE = {
+    care_coordinator: 'care_partner',
+    family_member: 'family_member',
+    view_only: 'trusted_advisor',
+  }
+
+  async function sendSingleInvite() {
+    setError('')
+    setLoading(true)
+
+    // persons.first_name / last_name are NOT NULL. Email-only invite — use
+    // the email's local-part (capitalized) as the first_name placeholder so
+    // the roster reads OK until the invitee signs up and replaces both.
+    const email = inviteEmail.trim()
+    const local = (email.split('@')[0] || 'invited').replace(/[._-]+/g, ' ')
+    const placeholderFirst =
+      local.charAt(0).toUpperCase() + local.slice(1)
+
+    const { data: invP, error: pErr } = await supabase
+      .from('persons')
+      .insert({
+        first_name: placeholderFirst,
+        last_name: '(pending)',
+        email,
+        auth_status: 'proxy',
+        created_by: person.id,
+      })
+      .select()
+      .single()
+
+    if (pErr) {
+      setError(
+        /duplicate key|unique/i.test(pErr.message)
+          ? 'That email already has a profile — finish onboarding and invite from My Circle instead.'
+          : pErr.message
+      )
+      setLoading(false)
+      return
+    }
+
+    const { error: mErr } = await supabase.from('circle_memberships').insert({
+      person_id: invP.id,
+      circle_id: createdCircleId,
+      role: ROLE_DB_VALUE[inviteRole] ?? 'family_member',
+      status: 'invited',
+      invited_by: person.id,
+    })
+
+    if (mErr) {
+      setError(mErr.message)
+      setLoading(false)
+      return
+    }
+
+    setLoading(false)
+    setInviteSent(true)
+  }
+
+  // Step: invite family (after the circle is created, before the dashboard).
+  // Single-invite, skippable, shown once per browser. v1.5 activation track.
   if (step === 'invite') {
+    if (inviteSent) {
+      return (
+        <div className="auth-page">
+          <div className="auth-card">
+            <div style={{ fontSize: '2.6rem', textAlign: 'center', marginBottom: '0.4rem' }} aria-hidden="true">✓</div>
+            <h1>Invite sent to {inviteEmail}</h1>
+            <p className="auth-subtitle">
+              They&apos;ll show up as <em>invited</em> in your circle. You can manage everyone
+              from My Circle anytime. (Account-claim emails ship in a later
+              phase — for now the invite is recorded; you can let them know.)
+            </p>
+            <button
+              type="button"
+              className="btn-primary-full"
+              onClick={() => { markInviteStepDone(); finishOnboarding() }}
+            >
+              Go to my dashboard →
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // v1.5 spec: 3 role choices with friendly copy. DB enum hasn't been
+    // renamed yet — the ROLE_DB_VALUE map (above) translates these keys to
+    // care_partner / family_member / trusted_advisor for the INSERT.
+    const ROLE_OPTIONS = [
+      { key: 'care_coordinator', label: 'Care Coordinator', desc: 'Helps manage the home and coordinate care.' },
+      { key: 'family_member',    label: 'Family Member',    desc: 'Stays informed and can help with tasks.' },
+      { key: 'view_only',        label: 'View Only',        desc: "Can see everything, can't make changes." },
+    ]
+
     return (
       <div className="auth-page">
-        <div className="auth-card auth-card-wide">
-          <h1>Your Home Circle is set up! 🎉</h1>
+        <div className="auth-card">
+          <div style={{ fontSize: '2.6rem', textAlign: 'center', marginBottom: '0.4rem' }} aria-hidden="true">👥</div>
+          <h1>Bring your family in</h1>
           <p className="auth-subtitle">
-            Want to invite family members? You can always do this later from My Circle.
+            Invite a family member so they can see your home and help when it
+            matters. You control exactly what they can see.
           </p>
 
           {error && <div className="auth-error" role="alert">{error}</div>}
 
-          <form onSubmit={(e) => { e.preventDefault(); sendInvites() }}>
-            {invites.map((s, i) => (
-              <div className="invite-slot" key={i}>
-                <div className="form-row">
-                  <label className="form-label">
-                    First name
-                    <input type="text" value={s.first} onChange={(e) => setInviteField(i, 'first', e.target.value)} className="form-input" />
-                  </label>
-                  <label className="form-label">
-                    Last name
-                    <input type="text" value={s.last} onChange={(e) => setInviteField(i, 'last', e.target.value)} className="form-input" />
-                  </label>
-                </div>
-                <label className="form-label">
-                  Email (optional)
-                  <input type="email" value={s.email} onChange={(e) => setInviteField(i, 'email', e.target.value)} className="form-input" placeholder="them@example.com" />
-                </label>
-                <RoleSelect
-                  name={`invite-role-${i}`}
-                  value={s.role}
-                  onChange={(r) => setInviteField(i, 'role', r)}
-                />
-              </div>
-            ))}
+          <form onSubmit={(e) => { e.preventDefault(); sendSingleInvite() }}>
+            <label className="form-label">
+              Email
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+                className="form-input"
+                placeholder="them@example.com"
+                autoComplete="email"
+              />
+            </label>
 
-            <button type="submit" className="btn-primary-full" disabled={loading}>
-              {loading ? 'Sending…' : 'Send Invites'}
+            <fieldset className="role-select">
+              <legend className="role-select-legend">Role</legend>
+              {ROLE_OPTIONS.map((r) => (
+                <label
+                  key={r.key}
+                  className={`role-option ${inviteRole === r.key ? 'role-option-active' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="onboarding-invite-role"
+                    value={r.key}
+                    checked={inviteRole === r.key}
+                    onChange={() => setInviteRole(r.key)}
+                  />
+                  <span className="role-option-text">
+                    <span className="role-option-label">{r.label}</span>
+                    <span className="role-option-desc">{r.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
+
+            <button
+              type="submit"
+              className="btn-primary-full"
+              disabled={loading || !inviteEmail.trim()}
+            >
+              {loading ? 'Sending…' : 'Send Invite'}
             </button>
-            <button type="button" className="btn-back" onClick={finishOnboarding} disabled={loading}>
-              I'll do this later
+            <button
+              type="button"
+              className="btn-back"
+              onClick={skipInviteStep}
+              disabled={loading}
+            >
+              Skip for now — I&apos;ll do this later
             </button>
           </form>
         </div>
