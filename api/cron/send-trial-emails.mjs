@@ -21,6 +21,13 @@ import {
 const ROLE_PRIORITY = { circle_manager: 1, home_owner: 2, care_partner: 3 }
 
 export default async function handler(req, res) {
+  // TEMP DEBUG — remove once env vars are confirmed wired through Vercel.
+  console.log('ENV CHECK:', {
+    hasResendKey: !!process.env.RESEND_API_KEY,
+    hasFromEmail: !!process.env.FROM_EMAIL,
+    nodeEnv: process.env.NODE_ENV
+  })
+
   const auth = req.headers?.authorization ?? ''
   const secret = process.env.CRON_SECRET ?? ''
   if (!secret || auth !== `Bearer ${secret}`) {
