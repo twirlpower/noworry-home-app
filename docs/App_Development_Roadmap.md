@@ -97,9 +97,9 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ Stripe integration + subscription management
 - ⬜ Trial expiration handler (day 31, grace period, downgrade)
 
-#### Activation Track — CURRENT
-- ⬜ Emergency contacts + RLS policy for emergency_contacts
-- ⬜ Invite family during onboarding (skippable)
+#### Activation Track — COMPLETE
+- ✅ Emergency contacts + RLS policy for emergency_contacts — 6772834
+- ✅ Invite family during onboarding (skippable) — c9d2824
 
 #### Feature Track
 - ⬜ Document vault (storage bucket ready)
@@ -119,7 +119,7 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 
 ### Vendor Materials
 - ✅ Rate card v1.0, one-pager, partner agreement
-- ⬜ Rate card v1.2 (walkthrough, $99 Covered, founder rate, findings tracking)
+- ⬜ Rate card v1.2 (walkthrough, $99 Covered, loyalty rate, findings tracking)
 - ⬜ Partner agreement updated (simple tasks definition + findings logging requirement)
 
 ---
@@ -157,7 +157,7 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ Update vendor partner agreement (simple tasks + findings logging)
 
 ### Vendor recruitment (starts now)
-- ⬜ Contact first 5 vendor candidates with rate card v1.2 + founder rate offer
+- ⬜ Contact first 5 vendor candidates with rate card v1.2 + loyalty rate offer
 - ⬜ First vendor conversation completed
 - ⬜ Flat rate card validated with real vendor
 - ⬜ First vendor credentialed and active

@@ -197,16 +197,10 @@ export default function Onboarding() {
     finishOnboarding()
   }
 
-  // Spec uses v1.5 role names (care_coordinator / view_only) that aren't in
-  // the circle_role enum yet. Map them to the closest existing values for
-  // the DB write; the UI shows the v1.5 labels. Update this map when the
-  // enum migration ships.
-  const ROLE_DB_VALUE = {
-    care_coordinator: 'care_partner',
-    family_member: 'family_member',
-    view_only: 'trusted_advisor',
-  }
-
+  // Migration 014 added care_coordinator and view_only to the circle_role
+  // enum, so the UI keys now map 1:1 to the DB values — the workaround
+  // mapping that used to translate care_coordinator → care_partner and
+  // view_only → trusted_advisor is no longer needed.
   async function sendSingleInvite() {
     setError('')
     setLoading(true)
@@ -244,7 +238,7 @@ export default function Onboarding() {
     const { error: mErr } = await supabase.from('circle_memberships').insert({
       person_id: invP.id,
       circle_id: createdCircleId,
-      role: ROLE_DB_VALUE[inviteRole] ?? 'family_member',
+      role: inviteRole,
       status: 'invited',
       invited_by: person.id,
     })

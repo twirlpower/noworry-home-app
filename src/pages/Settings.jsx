@@ -7,7 +7,10 @@ import { tierLabel } from '../lib/tiers'
 
 // Circle pillar = Full → may rename the circle (same matrix as HomeProfile /
 // Circle). Enforced server-side by circles_update (rls_policies_v1.sql).
-const RENAME_ROLES = ['home_owner', 'circle_manager', 'care_partner']
+// care_coordinator is the v1.5 rename of care_partner (migration 014);
+// both kept here so existing care_partner rows retain access. RLS update
+// to recognize care_coordinator ships in a follow-up migration.
+const RENAME_ROLES = ['home_owner', 'circle_manager', 'care_partner', 'care_coordinator']
 
 // Settings edits the email channel only. in_app is implicit; sms/push aren't
 // wired to a delivery path yet, so exposing them here would over-promise.

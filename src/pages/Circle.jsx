@@ -6,7 +6,10 @@ import { ROLE_LABELS } from '../lib/circleRoles'
 import RoleSelect from '../components/RoleSelect'
 
 // Family pillar = Full → can manage members (Family Graph matrix).
-const MANAGE_ROLES = ['home_owner', 'circle_manager', 'care_partner']
+// care_coordinator is the v1.5 rename of care_partner (migration 014); both
+// kept so existing care_partner rows retain access. RLS update to recognize
+// care_coordinator ships in a follow-up migration.
+const MANAGE_ROLES = ['home_owner', 'circle_manager', 'care_partner', 'care_coordinator']
 
 export default function Circle() {
   const { person } = useAuth()
