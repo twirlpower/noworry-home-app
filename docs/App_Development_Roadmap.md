@@ -29,6 +29,15 @@ A generational aging-in-place platform. Aware = lead. Prepared = primary revenue
 | Covered | $99/mo | $1,016/yr | $172/yr | ~$383-483/yr |
 | Complete | $159/mo | $1,305/yr | $603/yr | ~$814-914/yr |
 
+### Age Policy — No Gate
+Market to 55+. Serve everyone. No age restriction on signups, pricing, or vendor services.
+- Product is open to all homeowners — age verification never required
+- Vendor services gated by active market availability only — not age
+- Permanent home record must survive every ownership transfer regardless of new owner age
+- TOS must not contain age-restrictive language — review before first non-55+ member
+- Tagline works at every age — no marketing change needed
+- Board unanimous May 20, 2026
+
 ### Covered ($99/mo) includes
 - 2 HVAC tune-ups, 1 water heater flush, 2 gutter cleanings
 - 4 filter changes (quarterly handyman dispatch)
@@ -97,9 +106,9 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ Stripe integration + subscription management
 - ⬜ Trial expiration handler (day 31, grace period, downgrade)
 
-#### Activation Track — COMPLETE
-- ✅ Emergency contacts + RLS policy for emergency_contacts — 6772834
-- ✅ Invite family during onboarding (skippable) — c9d2824
+#### Activation Track — CURRENT
+- ⬜ Emergency contacts + RLS policy for emergency_contacts
+- ⬜ Invite family during onboarding (skippable)
 
 #### Feature Track
 - ⬜ Document vault (storage bucket ready)
@@ -119,7 +128,7 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 
 ### Vendor Materials
 - ✅ Rate card v1.0, one-pager, partner agreement
-- ⬜ Rate card v1.2 (walkthrough, $99 Covered, loyalty rate, findings tracking)
+- ⬜ Rate card v1.2 (walkthrough, $99 Covered, founder rate, findings tracking)
 - ⬜ Partner agreement updated (simple tasks definition + findings logging requirement)
 
 ---
@@ -157,7 +166,7 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ Update vendor partner agreement (simple tasks + findings logging)
 
 ### Vendor recruitment (starts now)
-- ⬜ Contact first 5 vendor candidates with rate card v1.2 + loyalty rate offer
+- ⬜ Contact first 5 vendor candidates with rate card v1.2 + founder rate offer
 - ⬜ First vendor conversation completed
 - ⬜ Flat rate card validated with real vendor
 - ⬜ First vendor credentialed and active
@@ -167,7 +176,8 @@ All Aware features built and smoke-tested. 301,218 home seeds. Custom domains li
 - ⬜ First conversation + one-pager sent
 
 ### Other
-- ⬜ Legal review (Colorado attorney)
+- ⬜ Legal review (Colorado attorney) — include TOS age-restriction review
+- ⬜ Remove any age-restrictive language from TOS before first non-55+ member signs up
 - ⬜ Build segmented view of 301K list by home age
 
 ---
