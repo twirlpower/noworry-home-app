@@ -55,6 +55,9 @@ export default function AppShell() {
             <NavLink to="/documents" className="nav-link">
               Documents
             </NavLink>
+            <NavLink to="/emergency-contacts" className="nav-link">
+              Emergency Contacts
+            </NavLink>
             <NavLink to="/tasks" className="nav-link">
               Tasks
             </NavLink>

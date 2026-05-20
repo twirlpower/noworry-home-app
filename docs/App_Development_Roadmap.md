@@ -114,9 +114,9 @@ Phase 2 is split into three tracks. Run revenue and activation in parallel. Feat
 - ⬜ Trial expiration handler — day 31 payment collection, grace period, downgrade if unpaid
 
 ### Activation Track — parallel with revenue track
-- ⬜ Emergency contacts — prioritized list (fast to build, high perceived value) ← **NEXT UP**
-- ⬜ RLS policy for `emergency_contacts` table
-- ⬜ Invite family during onboarding (post-home-profile step, skippable)
+- ✅ Emergency contacts — prioritized list (fast to build, high perceived value)
+- ✅ RLS policy for `emergency_contacts` table — migration 013
+- ⬜ Invite family during onboarding (post-home-profile step, skippable) ← **NEXT UP**
 
 ### Feature Track — after revenue + activation are solid
 - ⬜ Supabase storage bucket (prerequisite for document vault)

@@ -1,0 +1,185 @@
+/* Emergency Contacts page — scoped styles. Most structure reuses the shared
+   profile-card / system-row / form-* classes from index.css. These are just
+   the page-specific bits: priority badge, up/down arrow buttons, inline
+   delete-confirm, and the Aware-tier upgrade card. */
+
+.ec-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--cool);
+  border-radius: var(--radius-sm);
+  background: var(--off-white);
+}
+
+.ec-priority {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--deep);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ec-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ec-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--deep);
+}
+
+.ec-relationship {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.ec-contact-line {
+  font-size: 0.95rem;
+  margin-top: 0.2rem;
+}
+
+.ec-contact-line a {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ec-contact-line a:hover,
+.ec-contact-line a:focus-visible {
+  text-decoration: underline;
+}
+
+.ec-notes {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-top: 0.3rem;
+  font-style: italic;
+}
+
+/* Side column: up/down + edit/delete. 44px+ touch targets, senior-first.
+   Arrows stack vertically; row of action links below. */
+.ec-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.ec-reorder {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.ec-arrow {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--cool);
+  background: var(--white);
+  color: var(--deep);
+  border-radius: var(--radius-sm);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+.ec-arrow:hover:not(:disabled) {
+  background: var(--cool);
+}
+
+.ec-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ec-arrow:focus-visible {
+  outline: 2px solid var(--deep);
+  outline-offset: 2px;
+}
+
+.ec-row-links {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
+/* Inline delete-confirm — replaces the row's actions area until confirmed
+   or cancelled. No browser alert (jarring + non-stylable). */
+.ec-confirm-delete {
+  font-size: 0.9rem;
+  color: var(--red-text);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.ec-confirm-delete-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Aware-tier feature-locked card. Inline, not a full reveal — the
+   Dashboard's PreparedReveal handles the actual conversion moment. */
+.ec-upgrade {
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  background: var(--off-white);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.ec-upgrade-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+
+.ec-upgrade-body {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 1.2rem;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ec-upgrade .btn-primary-full {
+  max-width: 280px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Narrow viewport — stack the row content vertically so action column
+   doesn't squish phone numbers off-screen on 375px. */
+@media (max-width: 520px) {
+  .ec-row {
+    flex-wrap: wrap;
+  }
+  .ec-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  .ec-row-links {
+    justify-content: flex-end;
+  }
+}

@@ -14,6 +14,7 @@ import Safety from './pages/Safety'
 import Circle from './pages/Circle'
 import Tasks from './pages/Tasks'
 import Documents from './pages/Documents'
+import EmergencyContacts from './pages/EmergencyContacts'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="maintenance" element={<Maintenance />} />
               <Route path="safety" element={<Safety />} />
               <Route path="documents" element={<Documents />} />
+              <Route path="emergency-contacts" element={<EmergencyContacts />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="circle" element={<Circle />} />
               <Route path="settings" element={<Settings />} />
