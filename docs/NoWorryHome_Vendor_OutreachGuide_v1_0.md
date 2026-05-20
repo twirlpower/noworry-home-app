@@ -70,11 +70,11 @@ Goal: explain the model, answer questions, qualify fit. NOT to close.
 1. (2 min) What NoWorry Home does — platform for 55+ homeowners, coordinating home maintenance and family planning
 2. (3 min) What we send vendors — guaranteed recurring work, no marketing, predictable payment
 3. (5 min) What the seasonal walkthrough looks like — walk through the visit structure, findings logging, simple tasks
-4. (5 min) The rate card and founder rate — be direct about rates, explain the CAC trade
-5. (5 min) Their questions — be honest about current volume (zero/early stage), explain the founder vendor opportunity
+4. (5 min) The rate card and loyalty rate — be direct about rates, explain the CAC trade
+5. (5 min) Their questions — be honest about current volume (zero/early stage), explain the loyalty rate opportunity
 
 **Key line for the volume question:**
-> "I'll be straight with you — we're early stage. Our first members are signing up now. What I can offer you is the founder vendor rate, guaranteed payment, and first-mover advantage in your category in this territory. The volume grows as our member base grows. I'm looking for someone who sees the long-term opportunity, not just the next job."
+> "I'll be straight with you — we're early stage. Our first members are signing up now. What I can offer you is the loyalty rate, guaranteed payment, and first-mover advantage in your category in this territory. The volume grows as our member base grows. I'm looking for someone who sees the long-term opportunity, not just the next job."
 
 ### Step 3: Send the one-pager + rate card
 After the call — same day. Email is fine now that rapport is established.
