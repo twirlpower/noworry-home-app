@@ -1,0 +1,248 @@
+/* PreparedReveal — Aware→Prepared conversion moment.
+   Spec-mandated colors hard-coded here (one-off campaign UI, not global):
+     amber  #EF9F27 / #FAEEDA bg / #854F0B text  → "Up next" states
+     green  #3B6D11 / #EAF3DE bg                 → done states, CTA, badge
+     ring background #F2EBE2
+   No red anywhere by spec.
+   Reuses --white / --cool / --muted / --deep / --off-white / --text /
+   --radius / --radius-sm / --font from the global palette. */
+
+.prepared-reveal {
+  max-width: 480px;
+  margin: 1rem auto 1.5rem;
+  padding: 1.5rem;
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  font-family: var(--font);
+}
+
+/* ── Score ring ── */
+.pr-ring-wrap {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+
+.pr-ring {
+  width: 140px;
+  height: 140px;
+  display: block;
+  margin: 0 auto;
+}
+
+.pr-ring-track {
+  fill: none;
+  stroke: #F2EBE2;
+  stroke-width: 10;
+}
+
+.pr-ring-progress {
+  fill: none;
+  stroke: #EF9F27;
+  stroke-width: 10;
+  stroke-linecap: round;
+  /* Smooth fill-up when the score prop changes (and on initial paint if the
+     parent updates it after mount). 314 ≈ 2πr for r=50. */
+  transition: stroke-dashoffset 0.8s ease-out;
+}
+
+.pr-ring-score {
+  font-family: var(--font);
+  font-size: 28px;
+  font-weight: 700;
+  fill: var(--deep);
+}
+
+.pr-ring-label {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+/* ── Headline ── */
+.pr-headline {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.6rem;
+  text-align: center;
+}
+
+.pr-subtext {
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 1.2rem;
+  text-align: center;
+}
+
+/* ── Pills ── */
+.pr-pills {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+
+.pr-pill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pr-pill-done {
+  background: #EAF3DE;
+  color: #3B6D11;
+}
+
+.pr-pill-up-next {
+  background: #FAEEDA;
+  color: #854F0B;
+}
+
+.pr-pill-tag {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── Offer card ── */
+.pr-offer {
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  background: var(--off-white);
+}
+
+.pr-badge {
+  display: inline-block;
+  background: #EAF3DE;
+  color: #3B6D11;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.pr-offer-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+
+.pr-offer-body {
+  font-size: 15px;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.pr-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pr-features li {
+  position: relative;
+  padding-left: 1.7rem;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.pr-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #3B6D11;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* ── CTA — 44px+ touch target (senior-first / WCAG 2.5.5) ── */
+.pr-cta {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  background: #3B6D11;
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 700;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.pr-cta:hover {
+  background: #2D530C;
+}
+
+.pr-cta:focus-visible {
+  outline: 2px solid var(--deep);
+  outline-offset: 2px;
+}
+
+.pr-fine-print {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 0.7rem;
+}
+
+/* ── Dismiss link ── */
+.pr-dismiss {
+  display: block;
+  margin: 1.1rem auto 0;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.5rem 0.5rem;
+  min-height: 44px;
+}
+
+.pr-dismiss:hover {
+  color: var(--text);
+}
+
+.pr-dismiss:focus-visible {
+  outline: 2px solid var(--deep);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Narrow-viewport polish ── */
+@media (max-width: 420px) {
+  .prepared-reveal {
+    margin: 0.6rem auto 1rem;
+    padding: 1.2rem 1rem;
+    border-radius: var(--radius-sm);
+  }
+  .pr-ring {
+    width: 120px;
+    height: 120px;
+  }
+  .pr-offer {
+    padding: 1rem;
+  }
+}

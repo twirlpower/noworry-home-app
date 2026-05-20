@@ -5,6 +5,7 @@ import { useCircle } from '../context/CircleContext'
 import { computeHomeHealth } from '../lib/homeHealth'
 import { SAFETY_ITEMS } from '../lib/safetyItems'
 import HealthScore from '../components/HealthScore'
+import PreparedReveal from '../components/PreparedReveal'
 
 // Customer-facing role names (Family Graph spec / skill rule — never show the
 // raw enum in the UI).
@@ -27,14 +28,35 @@ function formatDue(dateStr) {
 export default function Dashboard() {
   const { person } = useAuth()
   const { activeCircle, membership } = useCircle()
+  const personId = person?.id
 
   const [loading, setLoading] = useState(true)
   const [health, setHealth] = useState(null)
   const [upcoming, setUpcoming] = useState([])
   const [openTasks, setOpenTasks] = useState([])
+  const [hasFamily, setHasFamily] = useState(false)
+  const [hasPlanItems, setHasPlanItems] = useState(false)
+
+  // Aware → Prepared conversion moment dismiss state. Lazy initializer reads
+  // localStorage once; the setter below writes it back when the user clicks
+  // "Remind me later", so the reveal stays hidden across sessions / refresh.
+  const [revealDismissed, setRevealDismissed] = useState(
+    () => typeof window !== 'undefined' &&
+      window.localStorage.getItem('preparedRevealDismissed') === 'true'
+  )
+
+  // Render gate: real column is `subscription_tier` (the spec said `tier`).
+  // After the rename in commit 6a574ea the value for the free tier is 'aware'.
+  const showReveal =
+    !revealDismissed && activeCircle?.subscription_tier === 'aware'
+
+  function dismissReveal() {
+    window.localStorage.setItem('preparedRevealDismissed', 'true')
+    setRevealDismissed(true)
+  }
 
   useEffect(() => {
-    if (!activeCircle) return
+    if (!activeCircle || !personId) return
     let cancelled = false
     supabase
       .from('circle_homes')
@@ -45,7 +67,12 @@ export default function Dashboard() {
       .then(async ({ data: ch }) => {
         if (cancelled) return
         const home = ch?.[0]?.homes ?? null
-        const [systemsR, schedR, safetyR, tasksR] = await Promise.all([
+        // Family / plan-items signals for the PreparedReveal — count-only
+        // queries (head: true) so we don't pull rows just to know "any".
+        // Note: emergency_contacts still has no RLS policy yet — RLS in
+        // deny-all mode returns count=0 without erroring, so the reveal
+        // gracefully treats absence as "no items" until policies land.
+        const [systemsR, schedR, safetyR, tasksR, familyR, docsR, contactsR] = await Promise.all([
           home
             ? supabase.from('home_systems').select('*').eq('home_id', home.id).eq('is_active', true)
             : Promise.resolve({ data: [] }),
@@ -62,6 +89,24 @@ export default function Dashboard() {
             .eq('circle_id', activeCircle.id)
             .neq('status', 'complete')
             .order('due_date', { ascending: true }),
+          // Spec said `circle_members.user_id`; real schema is
+          // circle_memberships.person_id. Excludes self so a solo owner
+          // reads as "no family yet" (drives the Up next pill).
+          supabase
+            .from('circle_memberships')
+            .select('id', { count: 'exact', head: true })
+            .eq('circle_id', activeCircle.id)
+            .in('status', ['active', 'invited'])
+            .neq('person_id', personId),
+          supabase
+            .from('documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('circle_id', activeCircle.id)
+            .eq('is_archived', false),
+          supabase
+            .from('emergency_contacts')
+            .select('id', { count: 'exact', head: true })
+            .eq('circle_id', activeCircle.id),
         ])
         if (cancelled) return
         const systems = systemsR.data ?? []
@@ -75,12 +120,14 @@ export default function Dashboard() {
         )
         setUpcoming(scheduled.slice(0, 4))
         setOpenTasks(tasksR.data ?? [])
+        setHasFamily((familyR.count ?? 0) > 0)
+        setHasPlanItems((docsR.count ?? 0) > 0 || (contactsR.count ?? 0) > 0)
         setLoading(false)
       })
     return () => {
       cancelled = true
     }
-  }, [activeCircle])
+  }, [activeCircle, personId])
 
   if (!activeCircle) {
     return (
@@ -110,6 +157,17 @@ export default function Dashboard() {
           {ROLE_LABELS[membership?.role] ?? membership?.role}
         </span>
       </div>
+
+      {showReveal && (
+        <PreparedReveal
+          score={health?.score ?? 0}
+          hasFamily={hasFamily}
+          hasPlanItems={hasPlanItems}
+          // Wired to console for this task; trial flow lands in the next one.
+          onStartTrial={() => console.log('trial started')}
+          onDismiss={dismissReveal}
+        />
+      )}
 
       <div className="dashboard-grid">
         <div className="dash-card dash-card-wide">
