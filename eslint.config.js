@@ -7,6 +7,8 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist']),
   {
+    // Client app — React + Vite. .mjs extension intentionally excluded so
+    // server-side .mjs files don't get hit with React-Compiler rules.
     files: ['**/*.{js,jsx}'],
     extends: [
       js.configs.recommended,
@@ -16,6 +18,17 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+  },
+  {
+    // Server-side: Vercel serverless functions + Node scripts. No React
+    // rules. Node globals (process, console, Buffer …).
+    files: ['api/**/*.{js,mjs}', 'scripts/**/*.{js,mjs}'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: globals.node,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
     },
   },
 ])

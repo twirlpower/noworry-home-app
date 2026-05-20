@@ -76,6 +76,10 @@ export default function Dashboard() {
       subscription_tier: 'prepared',
       trial_started_at: startedAt,
       trial_ends_at: endsAt,
+      // Initialize to {} so the cron (api/cron/send-trial-emails.mjs) can
+      // treat trial_emails_sent as a plain object without null-handling.
+      // Subsequent rows in the jsonb get stamped by the cron per send.
+      trial_emails_sent: {},
     }
 
     const { error: trialErr } = await supabase
