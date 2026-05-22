@@ -2255,6 +2255,129 @@ textarea.form-input {
 .admin-pill-role-staff    { color: var(--deep);     background: #DDF3E9; }
 .admin-pill-role-readonly { color: var(--muted);     background: var(--cool); }
 
+/* ── ADMIN STAT — warn / clickable variants ─────────────────────────────── */
+.admin-stat-warn .admin-stat-value { color: var(--amber-text); }
+.admin-stat-warn { border-color: #F0D699; background: #FBF3E3; }
+
+.admin-stat-clickable {
+  cursor: pointer;
+  font-family: var(--font);
+  text-align: left;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.admin-stat-clickable:hover { border-color: var(--teal); }
+.admin-stat-clickable:active { transform: translateY(1px); }
+
+/* ── VENDOR JOBS & PAYOUTS (inside vendor expand) ───────────────────────── */
+.vj-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--cool);
+}
+
+.vj-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.vj-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--deep);
+}
+
+.vj-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.vj-stat {
+  background: var(--off-white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.vj-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--deep);
+}
+
+.vj-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vj-stat-warn { background: #FBF3E3; border-color: #F0D699; }
+.vj-stat-warn .vj-stat-value { color: var(--amber-text); }
+
+.vj-stat-good .vj-stat-value { color: var(--deep); }
+
+/* Live margin preview inside the log-job form. */
+.vj-margin-preview {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0.2rem 0 1rem;
+}
+.vj-margin-good {
+  color: var(--deep);
+}
+td.vj-margin-good { color: var(--deep); font-weight: 700; }
+
+/* Job status pills (layered on .admin-pill) */
+.vj-status-completed { color: var(--deep);     background: #DDF3E9; }
+.vj-status-cancelled { color: var(--muted);    background: var(--cool); }
+.vj-status-disputed  { color: var(--red-text); background: #FDE3DA; }
+
+/* Payout pills */
+.vj-payout-pending { color: var(--amber-text); background: #FBF3E3; }
+.vj-payout-paid    { color: var(--deep);       background: #DDF3E9; }
+
+.vj-payout-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+}
+
+/* Inline Mark-Paid form */
+.vj-pay-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 0.7rem;
+  align-items: end;
+  padding: 0.7rem 0;
+}
+
+.vj-pay-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+}
+
+.vj-log-form {
+  margin-bottom: 0.4rem;
+}
+
+@media (max-width: 900px) {
+  .vj-stat-strip { grid-template-columns: repeat(2, 1fr); }
+  .vj-pay-form { grid-template-columns: 1fr; }
+}
+
 /* Active dot */
 .admin-dot {
   display: inline-block;

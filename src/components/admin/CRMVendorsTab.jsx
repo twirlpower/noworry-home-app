@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import VendorJobsSection from './VendorJobsSection'
 
 const TRADES = [
   ['hvac', 'HVAC'],
@@ -440,6 +441,14 @@ export default function CRMVendorsTab({ onChange }) {
                             >
                               Edit
                             </button>
+                          </div>
+
+                          {/* Jobs & Payouts — lazy-loads vendor_jobs for this
+                              vendor on mount. Bubbles bump callbacks up to
+                              parent so the CRM-level pending-payout stat
+                              refreshes after job inserts / mark-paid. */}
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <VendorJobsSection vendorId={v.id} onChange={onChange} />
                           </div>
                         </td>
                       </tr>

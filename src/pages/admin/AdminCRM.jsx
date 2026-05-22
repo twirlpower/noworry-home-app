@@ -17,6 +17,7 @@ export default function AdminCRM() {
     mrr: null,
     activePartners: null,
     activeVendors: null,
+    pendingPayouts: null,
   })
   // Bump to retrigger stat reload after tab inserts.
   const [refreshKey, setRefreshKey] = useState(0)
@@ -27,16 +28,23 @@ export default function AdminCRM() {
       supabase.from('crm_contacts').select('mrr, tier'),
       supabase.from('crm_partners').select('active').eq('active', true),
       supabase.from('vendors').select('status').eq('status', 'active'),
-    ]).then(([contactsRes, partnersRes, vendorsRes]) => {
+      // Pending payouts: sum of vendor_rate where payout_status='pending'.
+      supabase.from('vendor_jobs').select('vendor_rate').eq('payout_status', 'pending'),
+    ]).then(([contactsRes, partnersRes, vendorsRes, payoutsRes]) => {
       if (cancelled) return
       const contacts = contactsRes.data ?? []
       const paying = contacts.filter((c) => c.tier === 'covered' || c.tier === 'complete').length
       const mrr = contacts.reduce((sum, c) => sum + Number(c.mrr || 0), 0)
+      const pending = (payoutsRes.data ?? []).reduce(
+        (sum, j) => sum + Number(j.vendor_rate || 0),
+        0
+      )
       setStats({
         payingMembers: paying,
         mrr,
         activePartners: (partnersRes.data ?? []).length,
         activeVendors: (vendorsRes.data ?? []).length,
+        pendingPayouts: pending,
       })
     })
     return () => {
@@ -60,6 +68,12 @@ export default function AdminCRM() {
         <Stat label="Total MRR" value={stats.mrr != null ? `$${stats.mrr.toFixed(2)}` : null} />
         <Stat label="Active partners" value={stats.activePartners} />
         <Stat label="Active vendors" value={stats.activeVendors} />
+        <Stat
+          label="Pending payouts"
+          value={stats.pendingPayouts != null ? `$${stats.pendingPayouts.toFixed(2)}` : null}
+          tone={stats.pendingPayouts > 0 ? 'warn' : 'neutral'}
+          onClick={stats.pendingPayouts > 0 ? () => setTab('vendors') : null}
+        />
       </div>
 
       <div className="admin-tab-strip" role="tablist">
@@ -85,9 +99,25 @@ export default function AdminCRM() {
   )
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, tone, onClick }) {
+  const cls = [
+    'admin-stat',
+    tone === 'warn' ? 'admin-stat-warn' : '',
+    onClick ? 'admin-stat-clickable' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  if (onClick) {
+    return (
+      <button type="button" className={cls} onClick={onClick}>
+        <span className="admin-stat-value">{value == null ? '…' : value}</span>
+        <span className="admin-stat-label">{label}</span>
+      </button>
+    )
+  }
   return (
-    <div className="admin-stat">
+    <div className={cls}>
       <span className="admin-stat-value">{value == null ? '…' : value}</span>
       <span className="admin-stat-label">{label}</span>
     </div>
