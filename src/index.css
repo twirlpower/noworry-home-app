@@ -2296,6 +2296,209 @@ textarea.form-input {
 .prop-map-placeholder h2 { color: var(--muted); }
 .prop-map-placeholder p  { color: var(--muted); }
 
+/* ── HEAT MAP (Admin Member Map) ─────────────────────────────────────────── */
+.heatmap-page {
+  max-width: 1400px;
+}
+
+.heat-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 0.7rem 1rem;
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+}
+
+.heat-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.heat-filter-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-right: 0.3rem;
+}
+
+.heat-pill {
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--cool);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.heat-pill:hover { border-color: var(--teal); }
+.heat-pill-on   { font-weight: 700; }
+
+.heat-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1rem;
+  align-items: stretch;
+  height: calc(100vh - 320px);
+  min-height: 480px;
+}
+
+.heat-map-wrap {
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.heat-sidebar {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+  overflow-y: auto;
+}
+
+.heat-sidebar h3 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+
+.heat-sidebar-total {
+  font-size: 1.2rem;
+  color: var(--deep);
+  margin-bottom: 1rem;
+}
+
+.heat-sidebar-total strong { font-size: 1.6rem; }
+
+.heat-tier-bars {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.heat-tier-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  margin-bottom: 0.2rem;
+}
+
+.heat-tier-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.heat-tier-label { flex: 1; color: var(--text); }
+.heat-tier-count { font-weight: 700; color: var(--deep); }
+
+.heat-tier-bar {
+  height: 6px;
+  background: var(--cool);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.heat-tier-bar-fill {
+  height: 100%;
+  transition: width 0.25s;
+}
+
+.heat-vendor-note {
+  font-size: 0.92rem;
+  color: var(--text);
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--cool);
+}
+
+.heat-warn {
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 4px solid var(--gold);
+  background: #FBF3E3;
+  border-radius: var(--radius-sm);
+}
+.heat-warn h4 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--amber-text);
+  margin-bottom: 0.3rem;
+}
+.heat-warn p { font-size: 0.85rem; color: var(--text); }
+
+.heat-privacy-note {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Cluster icon (built via L.divIcon in JS) */
+.heat-cluster-wrap { background: transparent; border: none; }
+.heat-cluster {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(10, 74, 48, 0.3);
+  border: 2px solid #fff;
+}
+
+/* Popup styling (Leaflet renders into .leaflet-popup-content) */
+.heat-popup h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.3rem;
+}
+.heat-popup-total {
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.heat-popup ul {
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+@media (max-width: 900px) {
+  .heat-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .heat-map-wrap { height: 60vh; }
+}
+
 .admin-stat-clickable {
   cursor: pointer;
   font-family: var(--font);

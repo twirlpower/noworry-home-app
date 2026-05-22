@@ -129,6 +129,9 @@ export default function AppShell() {
                     <NavLink to="/admin/crm" className="nav-link">
                       <span aria-hidden="true">🗂</span> CRM
                     </NavLink>
+                    <NavLink to="/admin/heatmap" className="nav-link">
+                      <span aria-hidden="true">🗺</span> Member Map
+                    </NavLink>
                     {isOwner && (
                       <NavLink to="/admin/properties" className="nav-link">
                         <span aria-hidden="true">🏘</span> Properties
