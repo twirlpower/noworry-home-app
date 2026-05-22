@@ -3391,3 +3391,239 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
 .tech-status-amber { color: var(--amber-text); background: #FBF3E3; }
 .tech-status-red   { color: var(--red-text); background: #FDE3DA; }
 .tech-status-gray  { color: var(--muted);    background: var(--cool); }
+
+/* ── Home systems list on tech detail view ──────────────────────────────── */
+.tech-system-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.6rem 0 1rem;
+}
+.tech-system-row {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.95rem;
+}
+.tech-system-head { font-size: 1rem; }
+.tech-system-meta { color: var(--text); }
+.tech-system-condition {
+  margin-top: 0.3rem;
+  color: var(--amber-text);
+  font-weight: 600;
+}
+
+/* ── ASSESSMENT WIZARD ──────────────────────────────────────────────────── */
+.assess-page { padding-bottom: 2rem; }
+
+.assess-stepper {
+  list-style: none;
+  display: flex;
+  gap: 0.35rem;
+  margin: 1rem 0 1.2rem;
+  padding: 0;
+}
+.assess-stepper-dot {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--cool);
+}
+.assess-stepper-dot.done { background: var(--muted-teal); }
+.assess-stepper-dot.on   { background: var(--teal); }
+
+.assess-radio-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.assess-radio-group legend {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+.assess-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 56px;
+  padding: 0.7rem 1rem;
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius);
+  background: var(--white);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.assess-radio input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--teal);
+}
+.assess-radio.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+
+.assess-photo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  width: 100%;
+  background: #DDF3E9;
+  color: var(--deep);
+  border: 2px dashed var(--muted-teal);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 0.8rem;
+}
+.assess-photo-thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.8rem;
+  border: 1px solid var(--cool);
+}
+.assess-ocr-status {
+  color: var(--deep);
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.assess-field { display: block; margin-bottom: 0.9rem; }
+.assess-field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.assess-field-extracted .assess-field-label { color: var(--deep); }
+.assess-field-check { color: var(--teal); font-weight: 700; }
+.assess-field .form-input { font-size: 17px; min-height: 48px; }
+
+.assess-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  padding: 0.6rem;
+  min-height: 44px;
+  width: 100%;
+}
+
+.assess-hazard {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.8rem;
+}
+.assess-hazard-label {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.2rem;
+}
+.assess-hazard-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.assess-hazard-btn {
+  min-height: 56px;
+  padding: 0.7rem;
+  background: var(--white);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.assess-hazard-btn.on-clear {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+.assess-hazard-btn.on-present {
+  background: #FDE3DA;
+  border-color: var(--red);
+  color: var(--red-text);
+}
+
+.assess-review-block {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.8rem;
+}
+.assess-review-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.4rem;
+}
+.assess-review-head h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--deep);
+}
+.assess-review-edit {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+}
+.assess-review-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.assess-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+/* ── Member-facing system enrichment ────────────────────────────────────── */
+.system-filter {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  background: #DDF3E9;
+  border-radius: 999px;
+  color: var(--deep);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.system-condition {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--amber-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}

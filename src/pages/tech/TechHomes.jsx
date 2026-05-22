@@ -1,7 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { cacheHomes, getCachedHomes } from '../../lib/techSync'
+
+const SYSTEM_LABELS = {
+  furnace: 'Furnace',
+  ac: 'Air Conditioning',
+  water_heater: 'Water Heater',
+  electrical_panel: 'Electrical Panel',
+  washer: 'Washer',
+  dryer: 'Dryer',
+  refrigerator: 'Refrigerator',
+  dishwasher: 'Dishwasher',
+  sump_pump: 'Sump Pump',
+  sprinkler_controller: 'Sprinkler Controller',
+  hvac: 'HVAC',
+  plumbing: 'Plumbing',
+  electrical: 'Electrical',
+  appliance: 'Appliance',
+  other: 'Other',
+}
 
 // Single component for both the list (/tech/homes) and the detail
 // (/tech/homes/:circleId). useParams() decides which view to render —
@@ -28,12 +46,19 @@ function fmtVisitDate(d) {
 export default function TechHomes() {
   const { circleId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const flash = location.state?.flash ?? null
 
   const [homes, setHomes] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [fromCache, setFromCache] = useState(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  // Detail-view-only state: systems for the open home + assessment status
+  // pulled from homes table (since the RPC's assessment_complete is a
+  // placeholder false — see migration 034 comment).
+  const [detailSystems, setDetailSystems] = useState([])
+  const [detailComplete, setDetailComplete] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -77,6 +102,37 @@ export default function TechHomes() {
     return () => { cancelled = true }
   }, [])
 
+  // Detail-view fetch: home_id + assessment_complete + home_systems rows.
+  // Stays as-is on /tech/homes (no circleId) — the list view doesn't read
+  // detailSystems/detailComplete, so leaving stale values is harmless.
+  useEffect(() => {
+    if (!circleId) return
+    let cancelled = false
+    async function loadDetail() {
+      const { data: ch } = await supabase
+        .from('circle_homes')
+        .select('home_id, homes(assessment_complete)')
+        .eq('circle_id', circleId)
+        .eq('status', 'active')
+        .eq('is_primary', true)
+        .maybeSingle()
+      if (cancelled || !ch?.home_id) return
+      setDetailComplete(!!ch.homes?.assessment_complete)
+      const { data: sys } = await supabase
+        .from('home_systems')
+        .select('id, system_type, manufacturer, model_number, install_year, filter_size, location_notes, condition_notes, brand, model, location_in_home, notes, install_date, is_active, active')
+        .eq('home_id', ch.home_id)
+        .order('system_type')
+      if (cancelled) return
+      // Filter to assessment-era rows: either `active` is true, or fall
+      // back to legacy `is_active` true (handles pre-035 rows too).
+      const visible = (sys ?? []).filter((s) => s.active !== false && s.is_active !== false)
+      setDetailSystems(visible)
+    }
+    loadDetail()
+    return () => { cancelled = true }
+  }, [circleId])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return homes
@@ -115,6 +171,12 @@ export default function TechHomes() {
           ← Homes
         </button>
 
+        {flash && (
+          <div className="tech-banner tech-banner-good" role="status">
+            {flash}
+          </div>
+        )}
+
         <h1 className="tech-h1">{home.address_line1 || '(no street address)'}</h1>
         <p className="tech-subtle">
           {[home.city, home.zip].filter(Boolean).join(', ')}
@@ -145,7 +207,7 @@ export default function TechHomes() {
           </div>
         </div>
 
-        {home.assessment_complete ? (
+        {detailComplete ? (
           <div className="tech-banner tech-banner-good">
             ✓ Welcome Home Assessment complete
           </div>
@@ -156,6 +218,39 @@ export default function TechHomes() {
               Start Assessment →
             </Link>
           </div>
+        )}
+
+        {detailComplete && detailSystems.length > 0 && (
+          <>
+            <h2 className="tech-h2">Home Systems</h2>
+            <ul className="tech-system-list">
+              {detailSystems.map((s) => {
+                const manufacturer = s.manufacturer ?? s.brand ?? null
+                const modelNumber = s.model_number ?? s.model ?? null
+                const installYear = s.install_year ?? (s.install_date ? new Date(s.install_date).getFullYear() : null)
+                const location = s.location_notes ?? s.location_in_home ?? null
+                const condition = s.condition_notes ?? null
+                return (
+                  <li key={s.id} className="tech-system-row">
+                    <div className="tech-system-head">
+                      <strong>{SYSTEM_LABELS[s.system_type] ?? s.system_type}</strong>
+                      {installYear && <span className="tech-meta"> · {installYear}</span>}
+                    </div>
+                    <div className="tech-system-meta">
+                      {[manufacturer, modelNumber].filter(Boolean).join(' ') || <span className="tech-meta">No details</span>}
+                    </div>
+                    {s.filter_size && (
+                      <div className="tech-meta">Filter: <strong>{s.filter_size}</strong></div>
+                    )}
+                    {location && <div className="tech-meta">📍 {location}</div>}
+                    {condition && (
+                      <div className="tech-system-condition">⚠ {condition}</div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
 
         <h2 className="tech-h2">Visit history</h2>

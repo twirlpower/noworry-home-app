@@ -8,6 +8,7 @@ import AppShell from './components/AppShell'
 import TechShell from './pages/tech/TechShell'
 import TechHomes from './pages/tech/TechHomes'
 import TechProfile from './pages/tech/TechProfile'
+import TechAssessment from './pages/tech/TechAssessment'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
@@ -138,9 +139,7 @@ export default function App() {
               <Route path="today" element={
                 <div style={{ padding: '2rem' }}>Today's schedule — coming in 19b</div>
               } />
-              <Route path="assess/:circleId" element={
-                <div style={{ padding: '2rem' }}>Welcome Home Assessment — coming in 19b</div>
-              } />
+              <Route path="assess/:circleId" element={<TechAssessment />} />
               <Route path="checklist/:circleId" element={
                 <div style={{ padding: '2rem' }}>Quarterly Checklist — coming in 19c</div>
               } />

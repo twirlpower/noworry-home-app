@@ -516,27 +516,54 @@ export default function HomeProfile() {
             )
           : sysEditId === null && (
               <ul className="systems-list">
-                {systems.map((s) => (
-                  <li key={s.id} className="system-row">
-                    <div className="system-main">
-                      <span className="system-name">{s.name}</span>
-                      <span className="system-meta">
-                        {s.system_type?.replace(/_/g, ' ')}
-                        {s.location_in_home ? ` · ${s.location_in_home}` : ''}
-                      </span>
-                    </div>
-                    {canEdit && (
-                      <div className="system-actions">
-                        <button className="btn-link" onClick={() => openEditSystem(s)}>
-                          Edit
-                        </button>
-                        <button className="btn-link btn-link-danger" onClick={() => handleRemoveSystem(s)}>
-                          Remove
-                        </button>
+                {systems.map((s) => {
+                  // Prefer the assessment-era spec columns; fall back to
+                  // the legacy ones populated by the in-app form.
+                  const manufacturer = s.manufacturer || s.brand || null
+                  const modelNumber  = s.model_number  || s.model || null
+                  const location     = s.location_notes  || s.location_in_home || null
+                  const condition    = s.condition_notes || null
+                  const installYear  = s.install_year
+                    ?? (s.install_date ? new Date(s.install_date).getFullYear() : null)
+                  const age = installYear
+                    ? Math.max(0, new Date().getFullYear() - installYear)
+                    : null
+                  return (
+                    <li key={s.id} className="system-row">
+                      <div className="system-main">
+                        <span className="system-name">{s.name}</span>
+                        <span className="system-meta">
+                          {s.system_type?.replace(/_/g, ' ')}
+                          {location ? ` · ${location}` : ''}
+                        </span>
+                        {(manufacturer || modelNumber) && (
+                          <span className="system-meta">
+                            {[manufacturer, modelNumber].filter(Boolean).join(' ')}
+                            {age !== null && ` · ~${age} year${age === 1 ? '' : 's'} old`}
+                          </span>
+                        )}
+                        {s.filter_size && (
+                          <span className="system-filter">
+                            Filter: <strong>{s.filter_size}</strong>
+                          </span>
+                        )}
+                        {condition && (
+                          <span className="system-condition">⚠ {condition}</span>
+                        )}
                       </div>
-                    )}
-                  </li>
-                ))}
+                      {canEdit && (
+                        <div className="system-actions">
+                          <button className="btn-link" onClick={() => openEditSystem(s)}>
+                            Edit
+                          </button>
+                          <button className="btn-link btn-link-danger" onClick={() => handleRemoveSystem(s)}>
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             )}
       </div>

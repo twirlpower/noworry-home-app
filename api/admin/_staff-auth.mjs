@@ -47,3 +47,29 @@ export async function verifyStaff(req, supabase, allowedRoles = ['owner', 'staff
 export function logAdminAction(action, ctx) {
   console.log('[ADMIN ACTION]', action, JSON.stringify(ctx))
 }
+
+// Same shape as verifyStaff but checks hometech_accounts instead. Used to
+// gate api/tech/* routes — assessment proxy, etc. Returns the auth user
+// id so the route can stamp assessed_by, etc.
+export async function verifyHomeTech(req, supabase) {
+  const auth = req.headers?.authorization ?? ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+  if (!token) return { ok: false, status: 401, body: { error: 'unauthorized' } }
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser(token)
+  if (userErr || !userData?.user) {
+    return { ok: false, status: 401, body: { error: 'unauthorized' } }
+  }
+
+  const { data: row } = await supabase
+    .from('hometech_accounts')
+    .select('id, active')
+    .eq('user_id', userData.user.id)
+    .eq('active', true)
+    .maybeSingle()
+
+  if (!row) {
+    return { ok: false, status: 403, body: { error: 'forbidden' } }
+  }
+  return { ok: true, user: userData.user, hometechId: row.id }
+}
