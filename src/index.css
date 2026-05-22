@@ -2402,9 +2402,64 @@ textarea.form-input {
 }
 .address-conflict p:last-of-type { margin-bottom: 1rem; }
 
-/* ── ADMIN STAT — warn / clickable variants ─────────────────────────────── */
+/* ── ADMIN STAT — warn / good / danger / clickable variants ─────────────── */
 .admin-stat-warn .admin-stat-value { color: var(--amber-text); }
 .admin-stat-warn { border-color: #F0D699; background: #FBF3E3; }
+
+.admin-stat-good .admin-stat-value { color: var(--deep); }
+.admin-stat-good { border-color: var(--muted-teal); background: #E1F5EE; }
+
+.admin-stat-danger .admin-stat-value { color: var(--red-text); }
+.admin-stat-danger { border-color: #F4C8B5; background: #FDE3DA; }
+
+/* ── ADMIN FINANCE PAGE ─────────────────────────────────────────────────── */
+.finance-subhead {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.finance-promo-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.2rem;
+}
+
+.finance-coming-soon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.finance-soon-card {
+  background: var(--off-white);
+  border: 1px dashed var(--cool);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.1rem;
+}
+
+.finance-soon-card h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.finance-soon-card p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 0.7rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .finance-promo-grid { grid-template-columns: 1fr; }
+  .finance-coming-soon-grid { grid-template-columns: 1fr; }
+}
 
 /* Property-page stat tones layered on the admin-stat base. */
 .prop-stat-good     { border-color: var(--muted-teal); background: #E1F5EE; }

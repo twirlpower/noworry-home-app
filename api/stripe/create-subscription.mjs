@@ -155,19 +155,33 @@ export default async function handler(req, res) {
   // Validate the promo code first. Doing this BEFORE any customer/payment-
   // method work means an invalid code fails fast with no Stripe-side
   // side effects to clean up.
-  let validatedCoupon = null
+  //
+  // We use Stripe Promotion Codes (the customer-facing layer) — NOT the raw
+  // coupon retrieve. A promotion code wraps a coupon and carries the
+  // human-typed string (FOUNDER, FAMILY, etc.). Coupons have opaque ids
+  // and aren't meant to be customer-typed.
+  let promoCodeObj = null   // the promotion_code object (has .id, .code, .coupon)
+  let validatedCoupon = null // the nested coupon (drives descriptor + format)
   if (promoCode) {
     try {
-      const c = await stripe.coupons.retrieve(promoCode)
-      // A coupon can be retrieved while inactive (deleted=true or valid=false).
-      // Reject those — only currently-redeemable codes count.
-      if (!c?.valid) {
+      const list = await stripe.promotionCodes.list({
+        code: promoCode,
+        active: true,
+        limit: 1,
+      })
+      if (!list?.data?.length) {
         return res.status(400).json({ error: 'Invalid promo code' })
       }
-      validatedCoupon = c
+      promoCodeObj = list.data[0]
+      // Defensive: a promotion code can be active while its underlying
+      // coupon is invalid (rare, but possible if the coupon got tombstoned
+      // after the code was created).
+      if (!promoCodeObj.coupon?.valid) {
+        return res.status(400).json({ error: 'Invalid promo code' })
+      }
+      validatedCoupon = promoCodeObj.coupon
     } catch (e) {
-      // Stripe returns 404 / resource_missing for an unknown coupon id.
-      console.warn('[stripe/create-subscription] coupon lookup failed', e?.code, e?.message)
+      console.warn('[stripe/create-subscription] promo lookup failed', e?.code, e?.message)
       return res.status(400).json({ error: 'Invalid promo code' })
     }
   }
@@ -189,8 +203,9 @@ export default async function handler(req, res) {
       invoice_settings: { default_payment_method: paymentMethodId },
     })
 
-    // Use the newer `discounts` array shape rather than the deprecated
-    // `coupon` top-level parameter on subscriptions.create.
+    // discounts uses promotion_code (the customer-facing wrapper), not
+    // coupon. promoCodeObj.code is the human-typed value (e.g. FOUNDER);
+    // promoCodeObj.id is the prefixed Stripe id (e.g. promo_xxx).
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_PREPARED }],
@@ -198,9 +213,9 @@ export default async function handler(req, res) {
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         circle_id: circle.id,
-        ...(validatedCoupon ? { promo_code: validatedCoupon.id } : {}),
+        ...(promoCodeObj ? { promo_code: promoCodeObj.code } : {}),
       },
-      ...(validatedCoupon ? { discounts: [{ coupon: validatedCoupon.id }] } : {}),
+      ...(promoCodeObj ? { discounts: [{ promotion_code: promoCodeObj.id }] } : {}),
     })
 
     // Pull card details for display ("Visa ending in 4242"). PaymentMethod
@@ -249,6 +264,25 @@ export default async function handler(req, res) {
         detail: 'Payment succeeded but the local record could not be updated. Contact support.',
         stripe_subscription_id: subscription.id,
       })
+    }
+
+    // ── Best-effort: log the redemption to promo_redemptions ───────────────
+    // Service role bypasses RLS; the policies in migration 032 only gate
+    // client-side reads. Failure here doesn't roll back the subscription.
+    if (promoCodeObj && validatedCoupon) {
+      try {
+        await admin.from('promo_redemptions').insert({
+          circle_id:              circle.id,
+          coupon_code:            promoCodeObj.code,
+          coupon_name:            validatedCoupon.name || promoCodeObj.code,
+          discount_description:
+            validatedCoupon.metadata?.description || formatDiscount(validatedCoupon),
+          stripe_subscription_id: subscription.id,
+          stripe_customer_id:     customerId,
+        })
+      } catch (e) {
+        console.warn('[stripe/create-subscription] promo_redemptions insert failed', e?.message)
+      }
     }
 
     // ── Best-effort confirmation email ─────────────────────────────────────

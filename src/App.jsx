@@ -23,6 +23,7 @@ import AdminProperties from './pages/admin/AdminProperties'
 import AdminHeatmap from './pages/admin/AdminHeatmap'
 import AdminMaintenance from './pages/admin/AdminMaintenance'
 import AdminReports from './pages/admin/AdminReports'
+import AdminFinance from './pages/admin/AdminFinance'
 import { useStaffRole } from './hooks/useStaffRole'
 import { useCircle } from './context/CircleContext'
 
@@ -103,6 +104,9 @@ export default function App() {
               } />
               <Route path="admin/reports" element={
                 <AdminRoute requireOwner><AdminReports /></AdminRoute>
+              } />
+              <Route path="admin/finance" element={
+                <AdminRoute requireOwner><AdminFinance /></AdminRoute>
               } />
             </Route>
 
