@@ -21,6 +21,7 @@ import AdminCRM from './pages/admin/AdminCRM'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminProperties from './pages/admin/AdminProperties'
 import AdminHeatmap from './pages/admin/AdminHeatmap'
+import AdminMaintenance from './pages/admin/AdminMaintenance'
 import { useStaffRole } from './hooks/useStaffRole'
 import { useCircle } from './context/CircleContext'
 
@@ -95,6 +96,9 @@ export default function App() {
               } />
               <Route path="admin/heatmap" element={
                 <AdminRoute><AdminHeatmap /></AdminRoute>
+              } />
+              <Route path="admin/maintenance" element={
+                <AdminRoute requireOwner><AdminMaintenance /></AdminRoute>
               } />
             </Route>
 

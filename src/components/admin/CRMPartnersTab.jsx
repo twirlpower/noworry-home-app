@@ -9,6 +9,26 @@ const TYPES = [
   ['other', 'Other'],
 ]
 
+const STATUSES = [
+  ['prospect',   'Prospect'],
+  ['active',     'Active'],
+  ['inactive',   'Inactive'],
+  ['do_not_use', 'Do Not Use'],
+]
+const STATUS_LABEL = Object.fromEntries(STATUSES)
+const STATUS_PILL_COLOR = {
+  prospect:   'gray',
+  active:     'green',
+  inactive:   'light',
+  do_not_use: 'red',
+}
+
+const CONTACT_PREFS = [
+  ['email',  'Email'],
+  ['phone',  'Phone'],
+  ['either', 'Either'],
+]
+
 const EMPTY_FORM = {
   name: '',
   organization: '',
@@ -17,6 +37,11 @@ const EMPTY_FORM = {
   last_contact: '',
   members_referred: '',
   active: true,
+  status: 'prospect',
+  phone: '',
+  email: '',
+  preferred_contact: 'email',
+  address: '',
   notes: '',
   next_step: '',
 }
@@ -30,6 +55,11 @@ function partnerToForm(p) {
     last_contact: p.last_contact ?? '',
     members_referred: p.members_referred != null ? String(p.members_referred) : '',
     active: !!p.active,
+    status: p.status ?? 'prospect',
+    phone: p.phone ?? '',
+    email: p.email ?? '',
+    preferred_contact: p.preferred_contact ?? 'email',
+    address: p.address ?? '',
     notes: p.notes ?? '',
     next_step: p.next_step ?? '',
   }
@@ -111,7 +141,12 @@ export default function CRMPartnersTab({ onChange }) {
       date_met: form.date_met || null,
       last_contact: form.last_contact || null,
       members_referred: form.members_referred ? Number(form.members_referred) : 0,
-      active: form.active,
+      active: form.status !== 'inactive' && form.status !== 'do_not_use',
+      status: form.status,
+      phone: form.phone.trim() || null,
+      email: form.email.trim() || null,
+      preferred_contact: form.preferred_contact || 'email',
+      address: form.address.trim() || null,
       notes: form.notes.trim() || null,
       next_step: form.next_step.trim() || null,
     }
@@ -216,7 +251,7 @@ export default function CRMPartnersTab({ onChange }) {
               />
             </label>
           </div>
-          <div className="form-row">
+          <div className="form-row form-row-3">
             <label className="form-label">
               Members referred
               <input
@@ -227,15 +262,56 @@ export default function CRMPartnersTab({ onChange }) {
                 className="form-input"
               />
             </label>
-            <label className="form-label form-checkbox">
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) => setField('active', e.target.checked)}
-              />
-              Active
+            <label className="form-label">
+              Status
+              <select
+                value={form.status}
+                onChange={(e) => setField('status', e.target.value)}
+                className="form-input"
+              >
+                {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <label className="form-label">
+              Preferred contact
+              <select
+                value={form.preferred_contact}
+                onChange={(e) => setField('preferred_contact', e.target.value)}
+                className="form-input"
+              >
+                {CONTACT_PREFS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
             </label>
           </div>
+          <div className="form-row">
+            <label className="form-label">
+              Phone
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setField('phone', e.target.value)}
+                className="form-input"
+              />
+            </label>
+            <label className="form-label">
+              Email
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setField('email', e.target.value)}
+                className="form-input"
+              />
+            </label>
+          </div>
+          <label className="form-label">
+            Address
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => setField('address', e.target.value)}
+              className="form-input"
+            />
+          </label>
           <label className="form-label">
             Next step
             <input
@@ -278,7 +354,7 @@ export default function CRMPartnersTab({ onChange }) {
                 <th>Date Met</th>
                 <th>Last Contact</th>
                 <th>Referred</th>
-                <th>Active</th>
+                <th>Status</th>
                 <th>Next Step</th>
               </tr>
             </thead>
@@ -298,20 +374,36 @@ export default function CRMPartnersTab({ onChange }) {
                       <td>{fmtDate(p.last_contact)}</td>
                       <td>{p.members_referred ?? 0}</td>
                       <td>
-                        <span
-                          className={`admin-dot ${p.active ? 'admin-dot-on' : 'admin-dot-off'}`}
-                          aria-label={p.active ? 'Active' : 'Inactive'}
-                        />
+                        {(() => {
+                          const s = p.status ?? (p.active ? 'active' : 'inactive')
+                          const color = STATUS_PILL_COLOR[s] ?? 'gray'
+                          return (
+                            <span className={`admin-pill admin-pill-color-${color}`}>
+                              {s === 'do_not_use' && <span aria-hidden="true">⚠️ </span>}
+                              {STATUS_LABEL[s] ?? s}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="admin-cell-truncate">{p.next_step || '—'}</td>
                     </tr>
                     {open && (
                       <tr className="admin-row-expand">
                         <td colSpan={8}>
+                          {p.status === 'do_not_use' && (
+                            <div className="admin-do-not-use-banner" role="alert">
+                              ⚠️ Do Not Use — not shown in referral partner suggestions.
+                            </div>
+                          )}
                           <div className="admin-expand-body">
-                            <div>
-                              <strong>Notes</strong>
-                              <p>{p.notes || <em className="admin-meta">No notes</em>}</p>
+                            <div className="admin-expand-grid">
+                              <div><strong>Phone:</strong> {p.phone || <em className="admin-meta">—</em>}</div>
+                              <div><strong>Email:</strong> {p.email || <em className="admin-meta">—</em>}</div>
+                              <div><strong>Preferred:</strong> {p.preferred_contact || 'email'}</div>
+                              <div><strong>Address:</strong> {p.address || <em className="admin-meta">—</em>}</div>
+                              <div className="admin-expand-grid-full">
+                                <strong>Notes:</strong> {p.notes || <em className="admin-meta">No notes</em>}
+                              </div>
                             </div>
                             <button
                               type="button"

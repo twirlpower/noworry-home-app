@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+import { normalizeAddress } from '../lib/normalizeAddress'
 
 export default function Onboarding() {
   const location = useLocation()
@@ -15,6 +16,10 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [createdCircleId, setCreatedCircleId] = useState(null)
+  // Set when check_home_address_taken finds an active circle at the
+  // typed address — replaces the Next/Submit button with a warm
+  // contact-support message. Cleared by editing the address.
+  const [addressConflict, setAddressConflict] = useState(null)
   // Lightweight invite-family step (v1.5 activation track). Single email +
   // role, success state revealed after send. `inviteSent` flips on success
   // to show the confirmation screen.
@@ -71,6 +76,7 @@ export default function Onboarding() {
   function onAddressChange(v) {
     setSelectedSeed(null) // manual typing clears any chosen match
     setAddress(v)
+    if (addressConflict) setAddressConflict(null)
   }
 
   function selectSeed(s) {
@@ -99,6 +105,48 @@ export default function Onboarding() {
       )
       setLoading(false)
       return
+    }
+
+    // Address uniqueness: refuse to create another circle on top of an
+    // existing active home. check_home_address_taken is SECURITY DEFINER
+    // so this works even though the user can't see homes via member RLS.
+    const normalized = normalizeAddress(address)
+    if (normalized && zip) {
+      const { data: takenRows, error: takenErr } = await supabase.rpc(
+        'check_home_address_taken',
+        { p_normalized_address: normalized, p_zip: zip }
+      )
+      if (takenErr) {
+        setError(takenErr.message)
+        setLoading(false)
+        return
+      }
+      const taken = takenRows?.[0]
+      if (taken?.home_id) {
+        setAddressConflict({ homeId: taken.home_id, address, city, state, zip })
+        setLoading(false)
+        // Best-effort admin notification (failure does not affect UX).
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const token = session?.access_token
+          if (token) {
+            fetch('/api/admin/notify-address-conflict', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                address: { line1: address, city, state, zip },
+                existingHomeId: taken.home_id,
+              }),
+            }).catch(() => {})
+          }
+        } catch {
+          /* ignore */
+        }
+        return
+      }
     }
 
     const circleName = setupType === 'other'
@@ -499,9 +547,27 @@ export default function Onboarding() {
             </label>
           </div>
 
-          <button type="submit" className="btn-primary-full" disabled={loading}>
-            {loading ? 'Setting up your Home Circle...' : 'Create My Home Circle'}
-          </button>
+          {addressConflict ? (
+            <div className="address-conflict" role="alert">
+              <p>This address is already in our system.</p>
+              <p>
+                If you recently purchased this home or think this is a
+                mistake, please contact us and we'll get it sorted out
+                quickly.
+              </p>
+              <a
+                className="btn-primary-full"
+                href={`mailto:support@noworry-home.com?subject=${encodeURIComponent('Address already registered')}&body=${encodeURIComponent(`Address: ${address}, ${city}, ${state} ${zip}`)}`}
+                style={{ textAlign: 'center', textDecoration: 'none', display: 'block' }}
+              >
+                Contact Support →
+              </a>
+            </div>
+          ) : (
+            <button type="submit" className="btn-primary-full" disabled={loading}>
+              {loading ? 'Setting up your Home Circle...' : 'Create My Home Circle'}
+            </button>
+          )}
         </form>
 
         {setupType === 'other' && (

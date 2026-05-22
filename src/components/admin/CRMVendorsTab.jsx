@@ -16,6 +16,7 @@ const STATUSES = [
   ['onboarding', 'Onboarding'],
   ['active', 'Active'],
   ['inactive', 'Inactive'],
+  ['do_not_use', 'Do Not Use'],
 ]
 
 const TECH_TIERS = [
@@ -413,6 +414,11 @@ export default function CRMVendorsTab({ onChange }) {
                     {open && (
                       <tr className="admin-row-expand">
                         <td colSpan={10}>
+                          {v.status === 'do_not_use' && (
+                            <div className="admin-do-not-use-banner" role="alert">
+                              ⚠️ Do Not Use — excluded from dispatch.
+                            </div>
+                          )}
                           <div className="admin-expand-body">
                             <div className="admin-expand-grid">
                               <div>

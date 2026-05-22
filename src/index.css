@@ -2255,6 +2255,58 @@ textarea.form-input {
 .admin-pill-role-staff    { color: var(--deep);     background: #DDF3E9; }
 .admin-pill-role-readonly { color: var(--muted);     background: var(--cool); }
 
+/* Generic semantic-color pills used across Leads/Customers/Partners/Vendors
+   so each entity type can pick its own palette without bespoke classes. */
+.admin-pill-color-gray       { color: var(--muted);     background: var(--cool); }
+.admin-pill-color-blue       { color: #185FA5;          background: #DCEAF6; }
+.admin-pill-color-green      { color: var(--deep);     background: #DDF3E9; }
+.admin-pill-color-amber      { color: var(--amber-text); background: #FBF3E3; }
+.admin-pill-color-light      { color: var(--muted);     background: #EFEDEB; }
+.admin-pill-color-red        { color: var(--red-text); background: #FDE3DA; }
+.admin-pill-color-dark-red   { color: var(--white);    background: #8B2C12; }
+.admin-pill-color-dark-green { color: var(--white);    background: var(--deep); }
+
+/* Vendor pill that was added in earlier migrations — add do_not_use match. */
+.admin-pill-status-do_not_use { color: var(--red-text); background: #FDE3DA; }
+
+/* Red banner shown inside expanded vendor/partner row when status='do_not_use'. */
+.admin-do-not-use-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #FDE3DA;
+  color: var(--red-text);
+  border-left: 4px solid #B23A16;
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.95rem;
+  margin-bottom: 0.8rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* Customers tab — row of inline action buttons. */
+.customer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.6rem;
+}
+
+/* Onboarding address-conflict block — warm, not alarming. */
+.address-conflict {
+  background: #FBF3E3;
+  border: 1px solid #F0D699;
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+  margin-top: 0.8rem;
+}
+.address-conflict p {
+  color: var(--text);
+  margin-bottom: 0.7rem;
+  line-height: 1.55;
+}
+.address-conflict p:last-of-type { margin-bottom: 1rem; }
+
 /* ── ADMIN STAT — warn / clickable variants ─────────────────────────────── */
 .admin-stat-warn .admin-stat-value { color: var(--amber-text); }
 .admin-stat-warn { border-color: #F0D699; background: #FBF3E3; }

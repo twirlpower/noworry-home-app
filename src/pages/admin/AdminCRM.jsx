@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import CRMContactsTab from '../../components/admin/CRMContactsTab'
+import CRMLeadsTab from '../../components/admin/CRMLeadsTab'
+import CRMCustomersTab from '../../components/admin/CRMCustomersTab'
 import CRMPartnersTab from '../../components/admin/CRMPartnersTab'
 import CRMVendorsTab from '../../components/admin/CRMVendorsTab'
-import CRMMaintenanceTab from '../../components/admin/CRMMaintenanceTab'
 
 const TABS = [
-  ['contacts', 'Contacts'],
-  ['partners', 'Partners'],
-  ['vendors', 'Vendors'],
-  ['maintenance', 'Maintenance'],
+  ['leads',     'Leads'],
+  ['customers', 'Customers'],
+  ['partners',  'Partners'],
+  ['vendors',   'Vendors'],
 ]
 
 export default function AdminCRM() {
-  const [tab, setTab] = useState('contacts')
+  const [tab, setTab] = useState('leads')
   const [stats, setStats] = useState({
     payingMembers: null,
     mrr: null,
@@ -93,10 +93,10 @@ export default function AdminCRM() {
       </div>
 
       <div className="admin-tab-body">
-        {tab === 'contacts' && <CRMContactsTab onChange={bumpStats} />}
-        {tab === 'partners' && <CRMPartnersTab onChange={bumpStats} />}
-        {tab === 'vendors' && <CRMVendorsTab onChange={bumpStats} />}
-        {tab === 'maintenance' && <CRMMaintenanceTab onChange={bumpStats} />}
+        {tab === 'leads'     && <CRMLeadsTab     onChange={bumpStats} />}
+        {tab === 'customers' && <CRMCustomersTab onChange={bumpStats} />}
+        {tab === 'partners'  && <CRMPartnersTab  onChange={bumpStats} />}
+        {tab === 'vendors'   && <CRMVendorsTab   onChange={bumpStats} />}
       </div>
     </div>
   )
