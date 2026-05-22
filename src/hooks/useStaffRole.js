@@ -18,29 +18,16 @@ export function useStaffRole() {
   const [loadedFor, setLoadedFor] = useState(null)
 
   useEffect(() => {
-    if (!userId) {
-      // DEBUG: remove after staff routing is confirmed working.
-      // eslint-disable-next-line no-console
-      console.log('[useStaffRole] no userId (auth still loading or signed out)')
-      return
-    }
+    if (!userId) return
     let cancelled = false
-    // DEBUG: remove after staff routing is confirmed working.
-    // eslint-disable-next-line no-console
-    console.log('[useStaffRole] querying staff_accounts for user:', userId)
     supabase
       .from('staff_accounts')
       .select('*')
       .eq('user_id', userId)
       .eq('active', true)
       .maybeSingle()
-      .then(({ data, error }) => {
+      .then(({ data }) => {
         if (cancelled) return
-        // DEBUG: remove after staff routing is confirmed working.
-        // eslint-disable-next-line no-console
-        console.log('[useStaffRole] query result:', { data, error })
-        // eslint-disable-next-line no-console
-        console.log('[useStaffRole] isStaff:', !!data)
         setStaffRecord(data ?? null)
         setLoadedFor(userId)
       })

@@ -45,33 +45,9 @@ function AdminRoute({ children, requireOwner = false }) {
 function RootRedirect() {
   const { isStaff, loading: staffLoading } = useStaffRole()
   const { activeCircle, loading: circleLoading } = useCircle()
-
-  // DEBUG: remove after staff routing is confirmed working.
-  // eslint-disable-next-line no-console
-  console.log('[RootRedirect]', {
-    staffLoading,
-    circleLoading,
-    isStaff,
-    activeCircleId: activeCircle?.id ?? null,
-  })
-
-  if (staffLoading || circleLoading) {
-    // eslint-disable-next-line no-console
-    console.log('[RootRedirect] waiting on loading flags → render null')
-    return null
-  }
-  if (isStaff) {
-    // eslint-disable-next-line no-console
-    console.log('[RootRedirect] isStaff=true → navigate /admin/crm')
-    return <Navigate to="/admin/crm" replace />
-  }
-  if (activeCircle) {
-    // eslint-disable-next-line no-console
-    console.log('[RootRedirect] member with circle → navigate /dashboard')
-    return <Navigate to="/dashboard" replace />
-  }
-  // eslint-disable-next-line no-console
-  console.log('[RootRedirect] member without circle → navigate /onboarding')
+  if (staffLoading || circleLoading) return null
+  if (isStaff) return <Navigate to="/admin/crm" replace />
+  if (activeCircle) return <Navigate to="/dashboard" replace />
   return <Navigate to="/onboarding" replace />
 }
 
