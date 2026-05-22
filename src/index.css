@@ -3627,3 +3627,229 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* ── QUARTERLY CHECKLIST PAGE ───────────────────────────────────────────── */
+.checklist-page { padding-bottom: 8rem; }
+
+.check-progress {
+  position: sticky;
+  top: 0;
+  background: var(--off-white);
+  padding: 0.6rem 0 0.8rem;
+  margin: 0.5rem 0 0.8rem;
+  z-index: 5;
+}
+.check-progress-bar {
+  height: 8px;
+  background: var(--cool);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.check-progress-fill {
+  height: 100%;
+  background: var(--teal);
+  transition: width 0.2s;
+}
+.check-progress-text {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.check-category { margin-bottom: 1.4rem; }
+.check-category-head {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--deep);
+  margin-bottom: 0.6rem;
+}
+
+.check-item {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.6rem;
+}
+.check-item-na {
+  opacity: 0.6;
+}
+.check-item-confirmed {
+  background: #DDF3E9;
+  border-color: var(--teal);
+}
+.check-item-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+.check-item-filter {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding: 0.2rem 0.55rem;
+  background: #DDF3E9;
+  border-radius: 999px;
+  color: var(--deep);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.check-result-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.7fr;
+  gap: 0.4rem;
+}
+.check-result-btn {
+  min-height: 52px;
+  padding: 0.6rem 0.4rem;
+  background: var(--white);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.check-result-btn.on-done {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+.check-result-btn.on-warn {
+  background: #FBF3E3;
+  border-color: var(--gold);
+  color: var(--amber-text);
+}
+.check-result-btn.on-na {
+  background: var(--cool);
+  color: var(--muted);
+}
+
+.check-attention {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--cool);
+}
+.check-severity-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+.check-severity-btn {
+  min-height: 48px;
+  padding: 0.5rem 0.3rem;
+  background: var(--white);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+.check-severity-btn.on-monitor      { background: #DDF3E9; border-color: var(--teal); color: var(--deep); }
+.check-severity-btn.on-address_soon { background: #FBF3E3; border-color: var(--gold); color: var(--amber-text); }
+.check-severity-btn.on-urgent       { background: #FDE3DA; border-color: var(--red);  color: var(--red-text); }
+
+.check-confirm-btn {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  background: var(--white);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+}
+.check-confirm-btn.on {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: var(--white);
+}
+
+.check-floating-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  background: var(--white);
+  border-top: 1px solid var(--cool);
+  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 4;
+}
+.check-flagged-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--amber-text);
+}
+
+/* ── Visit history (tech detail) ────────────────────────────────────────── */
+.tech-visit-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.5rem 0 1.2rem;
+}
+.tech-visit-card {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.tech-visit-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.tech-visit-card-link {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-family: var(--font);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  align-self: flex-start;
+}
+
+/* ── Visit history (member maintenance page) ────────────────────────────── */
+.visit-history-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.visit-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--cool);
+}
+.visit-history-row:last-child { border-bottom: none; }
+.visit-history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}

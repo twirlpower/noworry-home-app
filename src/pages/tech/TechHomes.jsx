@@ -59,6 +59,8 @@ export default function TechHomes() {
   // placeholder false — see migration 034 comment).
   const [detailSystems, setDetailSystems] = useState([])
   const [detailComplete, setDetailComplete] = useState(false)
+  const [detailVisits, setDetailVisits] = useState([])
+  const [detailHomeId, setDetailHomeId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -117,7 +119,12 @@ export default function TechHomes() {
         .eq('is_primary', true)
         .maybeSingle()
       if (cancelled || !ch?.home_id) return
+      setDetailHomeId(ch.home_id)
       setDetailComplete(!!ch.homes?.assessment_complete)
+      // Visit history via the RPC. Up to 20 — UI shows first 4.
+      supabase
+        .rpc('get_home_visits', { p_home_id: ch.home_id })
+        .then(({ data }) => { if (!cancelled) setDetailVisits(data ?? []) })
       const { data: sys } = await supabase
         .from('home_systems')
         .select('id, system_type, manufacturer, model_number, install_year, filter_size, location_notes, condition_notes, brand, model, location_in_home, notes, install_date, is_active, active')
@@ -254,7 +261,15 @@ export default function TechHomes() {
         )}
 
         <h2 className="tech-h2">Visit history</h2>
-        <p className="tech-meta">No visits yet</p>
+        {detailVisits.length === 0 ? (
+          <p className="tech-meta">No visits yet</p>
+        ) : (
+          <ul className="tech-visit-list">
+            {detailVisits.slice(0, 4).map((v) => (
+              <VisitCard key={v.id} visit={v} homeId={detailHomeId} />
+            ))}
+          </ul>
+        )}
 
         <Link to={`/tech/checklist/${home.circle_id}`} className="tech-btn-primary">
           Start Quarterly Checklist →
@@ -317,5 +332,49 @@ export default function TechHomes() {
         </ul>
       )}
     </div>
+  )
+}
+
+// Per-row visit card with on-demand signed URL for the PDF link. The
+// signed URL is generated lazily on click — bucket is private, and
+// pre-fetching N URLs would mean N storage hits per detail render.
+function VisitCard({ visit }) {
+  const [opening, setOpening] = useState(false)
+  async function openReport() {
+    if (!visit.report_pdf_path || opening) return
+    setOpening(true)
+    const { data, error } = await supabase.storage
+      .from('visit-reports')
+      .createSignedUrl(visit.report_pdf_path, 60 * 60) // 1h
+    setOpening(false)
+    if (error || !data?.signedUrl) return
+    window.open(data.signedUrl, '_blank', 'noopener')
+  }
+  const visitDate = visit.visit_date
+    ? new Date(visit.visit_date + 'T00:00').toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric',
+      })
+    : ''
+  return (
+    <li className="tech-visit-card">
+      <div className="tech-visit-card-head">
+        <strong>{visitDate}</strong>
+        <span className="tech-status-pill tech-status-green">
+          {(visit.visit_type || 'quarterly').replace(/_/g, ' ')}
+        </span>
+      </div>
+      {visit.tech_name && <div className="tech-meta">Tech: {visit.tech_name}</div>}
+      <div className="tech-meta">
+        {visit.items_checked ?? 0} checked
+        {visit.items_flagged > 0 && (
+          <>{' · '}<span className="task-due-overdue">{visit.items_flagged} flagged</span></>
+        )}
+      </div>
+      {visit.report_pdf_path && (
+        <button type="button" className="tech-link tech-visit-card-link" onClick={openReport}>
+          {opening ? 'Opening…' : 'View Report →'}
+        </button>
+      )}
+    </li>
   )
 }

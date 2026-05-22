@@ -44,13 +44,13 @@ function parseOCRText(text) {
   for (const line of lines) {
     // Model number — "MODEL: ABC-123", "MOD#XYZ"
     if (!result.model_number && /MODEL|MOD[:\s]/i.test(line)) {
-      const m = line.match(/MODEL[:\s#]?\s*([A-Z0-9\-]+)/i)
+      const m = line.match(/MODEL[:\s#]?\s*([A-Z0-9-]+)/i)
       if (m) result.model_number = m[1]
     }
 
     // Serial number — "SERIAL: ...", "SER#...", "S/N ..."
     if (!result.serial_number && /SERIAL|SER[:\s]|S\/N/i.test(line)) {
-      const m = line.match(/(?:SERIAL|SER|S\/N)[:\s#]?\s*([A-Z0-9\-]+)/i)
+      const m = line.match(/(?:SERIAL|SER|S\/N)[:\s#]?\s*([A-Z0-9-]+)/i)
       if (m) result.serial_number = m[1]
     }
 

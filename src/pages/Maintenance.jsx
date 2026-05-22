@@ -127,6 +127,8 @@ export default function Maintenance() {
 
       <QuarterlyChecklist tier={activeCircle.subscription_tier} />
 
+      {homeId && <MemberVisitHistory homeId={homeId} />}
+
       {error && <div className="auth-error" role="alert">{error}</div>}
 
       {items.length === 0 ? (
@@ -158,6 +160,74 @@ export default function Maintenance() {
           })}
         </ul>
       )}
+    </div>
+  )
+}
+
+// Member-facing visit history block. RLS on home_visits already limits
+// rows to circles the user belongs to, so the RPC returns only their
+// own visits. Tone is intentionally warm — members don't see the raw
+// checklist items, just the summary + a PDF link.
+function MemberVisitHistory({ homeId }) {
+  const [visits, setVisits] = useState([])
+  const [loaded, setLoaded] = useState(false)
+  const [openingId, setOpeningId] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase
+      .rpc('get_home_visits', { p_home_id: homeId })
+      .then(({ data }) => {
+        if (cancelled) return
+        setVisits(data ?? [])
+        setLoaded(true)
+      })
+    return () => { cancelled = true }
+  }, [homeId])
+
+  async function openReport(v) {
+    if (!v.report_pdf_path || openingId) return
+    setOpeningId(v.id)
+    const { data } = await supabase.storage
+      .from('visit-reports')
+      .createSignedUrl(v.report_pdf_path, 60 * 60)
+    setOpeningId(null)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+  }
+
+  if (!loaded) return null
+  if (visits.length === 0) return null
+
+  return (
+    <div className="profile-card">
+      <h3>Visit History</h3>
+      <ul className="visit-history-list">
+        {visits.map((v) => {
+          const dt = v.visit_date
+            ? new Date(v.visit_date + 'T00:00').toLocaleDateString(undefined, {
+                month: 'long', year: 'numeric',
+              })
+            : ''
+          const flagged = v.items_flagged ?? 0
+          const summary = flagged === 0
+            ? 'Everything looked great ✓'
+            : `${flagged} item${flagged === 1 ? '' : 's'} noted for attention ⚠`
+          return (
+            <li key={v.id} className="visit-history-row">
+              <div className="visit-history-main">
+                <strong>{dt} — Quarterly Visit</strong>
+                <span className="maint-desc">{summary}</span>
+                {v.tech_name && <span className="maint-desc">{v.tech_name}</span>}
+              </div>
+              {v.report_pdf_path && (
+                <button type="button" className="btn-link" onClick={() => openReport(v)}>
+                  {openingId === v.id ? 'Opening…' : 'View Report'}
+                </button>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }

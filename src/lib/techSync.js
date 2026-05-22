@@ -271,9 +271,115 @@ export async function submitAssessment(payload) {
   return { mode: 'queued', detail: { reason: 'offline' } }
 }
 
-// Walks pending_assessments and syncs each. Stops on first failure so a
-// flaky upload doesn't burn through every queued item. Per-spec the
-// other two pending stores are still owned by their 19c implementations.
+// ── Checklist (quarterly visit) — payload shape ──────────────────────────
+//   {
+//     id,                  // assigned by IndexedDB autoIncrement
+//     circleId, homeId,
+//     userId, techName,
+//     quarterLabel,
+//     visit:   { visit_type, visit_date, checklist_version,
+//                items_checked, items_flagged, items_completed,
+//                health_score_before, health_score_after, notes },
+//     items:   [{ item_title, item_category, result, severity,
+//                 notes, completed_on_visit, photo: Blob|null }],
+//     queuedAt,
+//   }
+
+async function syncOneChecklist(p) {
+  // 1. Insert the visit (server assigns id).
+  const { data: visitRow, error: vErr } = await supabase
+    .from('home_visits')
+    .insert({
+      home_id:             p.homeId,
+      circle_id:           p.circleId,
+      tech_id:             p.userId ?? null,
+      tech_name:           p.techName ?? null,
+      ...p.visit,
+      status:              'in_progress',
+    })
+    .select('id')
+    .single()
+  if (vErr || !visitRow) throw vErr || new Error('visit_insert_failed')
+
+  // 2. Upload item photos sequentially, accumulating paths.
+  const withPaths = []
+  for (const it of p.items ?? []) {
+    let photo_path = null
+    if (it.photo) {
+      photo_path = await uploadPhoto(
+        it.photo,
+        `${p.homeId}/visits/${visitRow.id}/${(it.item_category || 'misc')}`
+      )
+    }
+    withPaths.push({ ...it, photo_path })
+  }
+
+  // 3. Insert items.
+  if (withPaths.length) {
+    const rows = withPaths.map((it) => ({
+      visit_id:           visitRow.id,
+      item_title:         it.item_title,
+      item_category:      it.item_category ?? null,
+      result:             it.result,
+      severity:           it.severity ?? null,
+      notes:              it.notes ?? null,
+      photo_path:         it.photo_path,
+      completed_on_visit: !!it.completed_on_visit,
+    }))
+    const { error: iErr } = await supabase.from('visit_checklist_items').insert(rows)
+    if (iErr) throw iErr
+  }
+
+  // 4. Call the PDF + email route. Best-effort — failure here means the
+  //    visit is saved but the report isn't sent. Surface so the queue
+  //    can retry.
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  if (!token) throw new Error('no_session_for_report')
+
+  const reportRes = await fetch('/api/tech/generate-visit-report', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ visitId: visitRow.id }),
+  })
+  if (!reportRes.ok) {
+    const body = await reportRes.json().catch(() => ({}))
+    throw new Error(body?.detail || body?.error || 'report_failed')
+  }
+  const payload = await reportRes.json().catch(() => ({}))
+
+  return { visitId: visitRow.id, recipientCount: payload?.recipientCount ?? 0 }
+}
+
+// Public: submit a checklist visit. Queue first; attempt online sync
+// immediately; markSynced on success.
+export async function submitChecklistVisit(payload) {
+  let id = null
+  try {
+    id = await saveLocally(STORES.completions, payload)
+  } catch (e) {
+    console.warn('[techSync] could not queue visit', e?.message)
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+    try {
+      const detail = await syncOneChecklist(payload)
+      if (id != null) await markSynced(STORES.completions, id).catch(() => {})
+      return { mode: 'synced', detail }
+    } catch (e) {
+      console.warn('[techSync] online visit submit failed, kept in queue', e?.message)
+      return { mode: 'queued', detail: { reason: e?.message ?? 'network_error' } }
+    }
+  }
+  return { mode: 'queued', detail: { reason: 'offline' } }
+}
+
+// Walks both pending stores and syncs each. Stops on first failure
+// within a store so a flaky upload doesn't burn through every queued
+// item.
 export async function syncAll() {
   const db = await getDb()
   if (!db) return { synced: 0, remaining: 0 }
@@ -283,20 +389,30 @@ export async function syncAll() {
   }
 
   let synced = 0
-  const pending = await db.getAll(STORES.assessments)
-  for (const item of pending) {
+
+  const pendingA = await db.getAll(STORES.assessments)
+  for (const item of pendingA) {
     try {
       await syncOneAssessment(item)
       await markSynced(STORES.assessments, item.id)
       synced += 1
     } catch (e) {
-      console.warn('[techSync] sync failed mid-batch, will retry', e?.message)
+      console.warn('[techSync] assessment sync failed mid-batch', e?.message)
       break
     }
   }
 
-  // TODO(19c): pending_findings and pending_checklist_completions
-  // sync handlers land with the checklist UI.
+  const pendingC = await db.getAll(STORES.completions)
+  for (const item of pendingC) {
+    try {
+      await syncOneChecklist(item)
+      await markSynced(STORES.completions, item.id)
+      synced += 1
+    } catch (e) {
+      console.warn('[techSync] checklist sync failed mid-batch', e?.message)
+      break
+    }
+  }
 
   return { synced, remaining: await getPendingCount() }
 }

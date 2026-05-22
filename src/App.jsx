@@ -9,6 +9,7 @@ import TechShell from './pages/tech/TechShell'
 import TechHomes from './pages/tech/TechHomes'
 import TechProfile from './pages/tech/TechProfile'
 import TechAssessment from './pages/tech/TechAssessment'
+import TechChecklist from './pages/tech/TechChecklist'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
@@ -140,9 +141,7 @@ export default function App() {
                 <div style={{ padding: '2rem' }}>Today's schedule — coming in 19b</div>
               } />
               <Route path="assess/:circleId" element={<TechAssessment />} />
-              <Route path="checklist/:circleId" element={
-                <div style={{ padding: '2rem' }}>Quarterly Checklist — coming in 19c</div>
-              } />
+              <Route path="checklist/:circleId" element={<TechChecklist />} />
               <Route path="profile" element={<TechProfile />} />
             </Route>
 
