@@ -1,8 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CircleProvider } from './context/CircleContext'
+import { ViewModeProvider } from './context/ViewModeContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import HomeTechRoute from './components/HomeTechRoute'
 import AppShell from './components/AppShell'
+import TechShell from './pages/tech/TechShell'
+import TechHomes from './pages/tech/TechHomes'
+import TechProfile from './pages/tech/TechProfile'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
@@ -62,6 +67,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CircleProvider>
+          <ViewModeProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -120,8 +126,30 @@ export default function App() {
             <Route path="/upgrade" element={<Navigate to="/dashboard" replace />} />
             <Route path="/trial-activation" element={<Navigate to="/dashboard" replace />} />
 
+            {/* HomeTech field app — separate shell, guarded by HomeTechRoute. */}
+            <Route path="/tech" element={
+              <ProtectedRoute>
+                <HomeTechRoute><TechShell /></HomeTechRoute>
+              </ProtectedRoute>
+            }>
+              <Route index element={<Navigate to="/tech/homes" replace />} />
+              <Route path="homes" element={<TechHomes />} />
+              <Route path="homes/:circleId" element={<TechHomes />} />
+              <Route path="today" element={
+                <div style={{ padding: '2rem' }}>Today's schedule — coming in 19b</div>
+              } />
+              <Route path="assess/:circleId" element={
+                <div style={{ padding: '2rem' }}>Welcome Home Assessment — coming in 19b</div>
+              } />
+              <Route path="checklist/:circleId" element={
+                <div style={{ padding: '2rem' }}>Quarterly Checklist — coming in 19c</div>
+              } />
+              <Route path="profile" element={<TechProfile />} />
+            </Route>
+
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
+          </ViewModeProvider>
         </CircleProvider>
       </AuthProvider>
     </BrowserRouter>

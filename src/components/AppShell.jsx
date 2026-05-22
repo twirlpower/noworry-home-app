@@ -3,6 +3,8 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { useStaffRole } from '../hooks/useStaffRole'
+import { useHomeTechRole } from '../hooks/useHomeTechRole'
+import { useViewMode } from '../context/ViewModeContext'
 
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
 const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
@@ -11,6 +13,11 @@ export default function AppShell() {
   const { person, signOut } = useAuth()
   const { circles, activeCircle, switchCircle } = useCircle()
   const { isStaff, isOwner, loading: staffLoading } = useStaffRole()
+  const { isHomeTech } = useHomeTechRole()
+  // Aliased — AppShell already has a local setViewMode for the staff
+  // "View as Member" toggle. ViewModeContext's setViewMode controls the
+  // dual-role admin/tech switch, which is a separate state machine.
+  const { setViewMode: setAppViewMode } = useViewMode()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -207,6 +214,19 @@ export default function AppShell() {
               </div>
             )}
           </div>
+        )}
+
+        {isHomeTech && (
+          <button
+            type="button"
+            className="switch-to-field-link"
+            onClick={() => {
+              setAppViewMode('tech')
+              navigate('/tech/homes')
+            }}
+          >
+            <span aria-hidden="true">🔧</span> Switch to Field Mode →
+          </button>
         )}
 
         <div className="app-nav-user">
