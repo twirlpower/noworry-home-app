@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { useStaffRole } from '../hooks/useStaffRole'
@@ -9,8 +9,21 @@ const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
 export default function AppShell() {
   const { person, signOut } = useAuth()
   const { circles, activeCircle, switchCircle } = useCircle()
-  const { isStaff, isOwner } = useStaffRole()
+  const { isStaff, isOwner, loading: staffLoading } = useStaffRole()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Defense-in-depth: even though RootRedirect routes staff to /admin/crm,
+  // a staff member could still reach a member page via a bookmark, browser
+  // back, or pasted URL. Bounce them back to admin. Wait on staffLoading
+  // so we don't redirect during the initial Supabase lookup (which would
+  // misread legitimate staff as members on the first render).
+  useEffect(() => {
+    if (staffLoading) return
+    if (isStaff && !location.pathname.startsWith('/admin')) {
+      navigate('/admin/crm', { replace: true })
+    }
+  }, [isStaff, staffLoading, location.pathname, navigate])
 
   // localStorage read is synchronous and cheap; lazy init keeps it out of an effect.
   const [adminOpen, setAdminOpen] = useState(() => {
