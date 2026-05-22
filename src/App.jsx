@@ -20,6 +20,7 @@ import Settings from './pages/Settings'
 import AdminCRM from './pages/admin/AdminCRM'
 import AdminSettings from './pages/admin/AdminSettings'
 import { useStaffRole } from './hooks/useStaffRole'
+import { useCircle } from './context/CircleContext'
 
 // Role-based admin gate. Non-staff bounce silently to /dashboard. While the
 // role lookup is in flight we render nothing — better than flashing the
@@ -32,12 +33,22 @@ function AdminRoute({ children, requireOwner = false }) {
   return children
 }
 
-// Index route: staff land directly on /admin/crm (they have no Home and
-// never see the member app). Everyone else goes to /dashboard.
+// Index route. Three destinations:
+//   * Staff (any role)             → /admin/crm
+//   * Member with an active circle → /dashboard
+//   * Member without a circle      → /onboarding
+//
+// Both useStaffRole and useCircle are async (Supabase lookups). Render
+// nothing while either is still resolving — otherwise a member would
+// flash through /dashboard before their staff role lookup resolves, or
+// a staff account would briefly see the member onboarding screen.
 function RootRedirect() {
-  const { isStaff, loading } = useStaffRole()
-  if (loading) return null
-  return <Navigate to={isStaff ? '/admin/crm' : '/dashboard'} replace />
+  const { isStaff, loading: staffLoading } = useStaffRole()
+  const { activeCircle, loading: circleLoading } = useCircle()
+  if (staffLoading || circleLoading) return null
+  if (isStaff) return <Navigate to="/admin/crm" replace />
+  if (activeCircle) return <Navigate to="/dashboard" replace />
+  return <Navigate to="/onboarding" replace />
 }
 
 export default function App() {
