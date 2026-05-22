@@ -42,16 +42,18 @@ export default async function handler(req, res) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   const fromEmail = process.env.FROM_EMAIL
 
-  // 1. Candidate circles: trial active and still inside the 30-day window.
-  //    Once trial_ends_at passes we stop sending — expiry collection lives
-  //    in a separate handler (Stripe integration task).
-  const nowIso = new Date().toISOString()
+  // 1. Candidate circles: any Prepared circle still in 'trial' billing
+  //    status. Drops the previous trial_ends_at filter so the day_30
+  //    "trial ended" email can fire after trial_ends_at passes. Once a
+  //    circle moves to billing_status='active' (paid) or 'canceled'
+  //    (downgrade), it stops appearing here — and trial_emails_sent
+  //    stamps prevent double-sends in any case.
   const { data: circles, error: queryError } = await supabase
     .from('family_circles')
-    .select('id, name, subscription_tier, trial_started_at, trial_ends_at, trial_emails_sent')
+    .select('id, name, subscription_tier, trial_started_at, trial_ends_at, trial_emails_sent, billing_status')
     .eq('subscription_tier', 'prepared')
+    .eq('billing_status', 'trial')
     .not('trial_started_at', 'is', null)
-    .gte('trial_ends_at', nowIso)
 
   if (queryError) {
     console.error('Trial cron: circle query failed:', queryError)

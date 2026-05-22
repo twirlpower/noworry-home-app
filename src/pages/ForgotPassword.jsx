@@ -29,8 +29,8 @@ export default function ForgotPassword() {
         <div className="auth-card">
           <h1>Check your email</h1>
           <p className="auth-subtitle">
-            We sent a password reset link to <strong>{email}</strong>.
-            Click the link in the email to reset your password.
+            We've sent a password reset link to <strong>{email}</strong>.
+            It expires in 1 hour.
           </p>
           <Link to="/login" className="btn-primary-full" style={{ textAlign: 'center', textDecoration: 'none', display: 'block' }}>
             Back to Sign In

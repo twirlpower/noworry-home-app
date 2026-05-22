@@ -1,11 +1,43 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { computeHomeHealth } from '../lib/homeHealth'
 import { SAFETY_ITEMS } from '../lib/safetyItems'
+import { CRITICAL_TYPE_KEYS } from '../lib/documents'
+import { evaluate as evaluatePrompt } from '../lib/promptEngine'
 import HealthScore from '../components/HealthScore'
 import PreparedReveal from '../components/PreparedReveal'
+import PromptCard from '../components/PromptCard'
+import PaymentModal from '../components/PaymentModal'
+import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
+
+const MS_PER_DAY = 86400000
+const TRIAL_TOTAL_DAYS = 30
+const TRIAL_WARN_DAYS = 7
+
+const ESSENTIAL_TOTAL = CRITICAL_TYPE_KEYS.length
+const DISMISSED_PROMPTS_KEY = 'nwh-dismissed-prompts'
+
+function readDismissed() {
+  try {
+    const raw = localStorage.getItem(DISMISSED_PROMPTS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeDismissed(list) {
+  try {
+    localStorage.setItem(DISMISSED_PROMPTS_KEY, JSON.stringify(list))
+  } catch {
+    // best-effort persistence
+  }
+}
 
 // Customer-facing role names (Family Graph spec / skill rule — never show the
 // raw enum in the UI).
@@ -36,6 +68,11 @@ export default function Dashboard() {
   const [openTasks, setOpenTasks] = useState([])
   const [hasFamily, setHasFamily] = useState(false)
   const [hasPlanItems, setHasPlanItems] = useState(false)
+  const [contactsCount, setContactsCount] = useState(0)
+  const [essentialsCovered, setEssentialsCovered] = useState(0)
+  const [promptContext, setPromptContext] = useState(null)
+  // Lazy initializer — localStorage is sync, no effect needed.
+  const [dismissedPrompts, setDismissedPrompts] = useState(() => readDismissed())
 
   // Aware → Prepared conversion moment dismiss state. Lazy initializer reads
   // localStorage once; the setter below writes it back when the user clicks
@@ -55,8 +92,31 @@ export default function Dashboard() {
     setRevealDismissed(true)
   }
 
+  // PromptCard dismiss: append { id, dismissedAt } and persist. The engine
+  // honors a 30-day TTL on dismissals, so the same prompt won't reappear
+  // until then (and re-evaluation may pick a lower-priority one in the
+  // meantime).
+  function dismissPrompt(prompt) {
+    setDismissedPrompts((prev) => {
+      const next = [
+        ...prev.filter((d) => d.id !== prompt.id),
+        { id: prompt.id, dismissedAt: new Date().toISOString() },
+      ]
+      writeDismissed(next)
+      return next
+    })
+  }
+
   const [trialLoading, setTrialLoading] = useState(false)
   const [trialError, setTrialError] = useState('')
+
+  // Billing UI: paid-flow modal (PaymentModal) + downgrade confirmation.
+  const [paymentOpen, setPaymentOpen] = useState(false)
+  const [downgradeOpen, setDowngradeOpen] = useState(false)
+  // Toast shown after a successful upgrade, drives a one-shot success banner.
+  const [paymentToast, setPaymentToast] = useState(false)
+  // Stable "now" — lazy init keeps Date.now() out of render (impure).
+  const [nowMs] = useState(() => Date.now())
 
   // Flip the active circle to Prepared and stamp a 30-day trial window.
   // Spec said `circles` — real table is `family_circles`. The reveal
@@ -80,6 +140,10 @@ export default function Dashboard() {
       // treat trial_emails_sent as a plain object without null-handling.
       // Subsequent rows in the jsonb get stamped by the cron per send.
       trial_emails_sent: {},
+      // billing_status='trial' is what the cron now filters on, and what
+      // the trial status bar / expired interstitial keys off. Migration
+      // 022 backfilled this for existing rows; new trials start it here.
+      billing_status: 'trial',
     }
 
     const { error: trialErr } = await supabase
@@ -141,9 +205,11 @@ export default function Dashboard() {
             .eq('circle_id', activeCircle.id)
             .in('status', ['active', 'invited'])
             .neq('person_id', personId),
+          // document_type rows (not just count) so we can derive how many
+          // distinct CRITICAL types are covered for the readiness card.
           supabase
             .from('documents')
-            .select('id', { count: 'exact', head: true })
+            .select('document_type')
             .eq('circle_id', activeCircle.id)
             .eq('is_archived', false),
           supabase
@@ -164,7 +230,35 @@ export default function Dashboard() {
         setUpcoming(scheduled.slice(0, 4))
         setOpenTasks(tasksR.data ?? [])
         setHasFamily((familyR.count ?? 0) > 0)
-        setHasPlanItems((docsR.count ?? 0) > 0 || (contactsR.count ?? 0) > 0)
+        const ecCount = contactsR.count ?? 0
+        setContactsCount(ecCount)
+        const docRows = docsR.data ?? []
+        const presentTypes = new Set(docRows.map((d) => d.document_type))
+        const covered = CRITICAL_TYPE_KEYS.filter((k) => presentTypes.has(k)).length
+        setEssentialsCovered(covered)
+        setHasPlanItems(docRows.length > 0 || ecCount > 0)
+
+        // Build the prompt engine's context from data we already fetched.
+        // No extra round-trips.
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const overdueMaint = scheduled.filter(
+          (m) => m.due_date && new Date(m.due_date + 'T00:00:00') < today
+        )
+        const safetyDoneCount = (safetyR.data ?? []).filter((r) => r.is_complete).length
+        setPromptContext({
+          tier: activeCircle.subscription_tier,
+          circleCreatedAt: activeCircle.created_at,
+          trialStartedAt: activeCircle.trial_started_at,
+          homeSystems: systems,
+          overdueMaintenance: overdueMaint,
+          safetyTotal: SAFETY_ITEMS.length,
+          safetyDone: safetyDoneCount,
+          contactsCount: ecCount,
+          criticalDocsCovered: covered,
+          tasksCount: (tasksR.data ?? []).length,
+        })
+
         setLoading(false)
       })
     return () => {
@@ -192,6 +286,66 @@ export default function Dashboard() {
     )
   }
 
+  // ── Billing/trial derived state ───────────────────────────────────────────
+  // billing_status is the source of truth (NULL = no billing relationship,
+  // 'trial' = inside or just past the 30-day trial, 'active' = paid).
+  // nowMs is captured once at mount — Date.now() in render is impure per
+  // the strict React-hooks ruleset. Few-minute drift is fine for trial UI;
+  // a fresh load shows the up-to-date count.
+  const billing = activeCircle.billing_status
+  const trialEndsAt = activeCircle.trial_ends_at
+    ? new Date(activeCircle.trial_ends_at)
+    : null
+  const trialExpired = trialEndsAt && trialEndsAt.getTime() <= nowMs
+  const onTrial = billing === 'trial' && trialEndsAt
+  const daysRemaining = onTrial
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - nowMs) / MS_PER_DAY))
+    : null
+  const trialActive = onTrial && !trialExpired
+  const inWarnWindow = trialActive && daysRemaining <= TRIAL_WARN_DAYS
+  const showExpiredInterstitial = onTrial && trialExpired
+
+  // Trial-expired interstitial — replaces the normal dashboard content.
+  if (showExpiredInterstitial) {
+    return (
+      <div className="page">
+        <div className="trial-expired-card">
+          <h1>Your free trial has ended</h1>
+          <p className="trial-expired-body">
+            You've built a great foundation. Keep your home record, documents,
+            and family plan active with a Prepared membership.
+          </p>
+          <p className="trial-expired-price">$12/month · Cancel anytime</p>
+          <button
+            type="button"
+            className="btn-primary-full"
+            onClick={() => setPaymentOpen(true)}
+          >
+            Continue with Prepared →
+          </button>
+          <button
+            type="button"
+            className="btn-link trial-expired-downgrade"
+            onClick={() => setDowngradeOpen(true)}
+          >
+            Continue with free Aware plan →
+          </button>
+        </div>
+
+        <PaymentModal
+          open={paymentOpen}
+          onClose={() => setPaymentOpen(false)}
+          onSuccess={() => setPaymentToast(true)}
+        />
+        <DowngradeConfirmModal
+          open={downgradeOpen}
+          onClose={() => setDowngradeOpen(false)}
+          variant="aware"
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -200,6 +354,12 @@ export default function Dashboard() {
           {ROLE_LABELS[membership?.role] ?? membership?.role}
         </span>
       </div>
+
+      {paymentToast && (
+        <div className="auth-notice" role="status">
+          Welcome to Prepared! 🎉 Your subscription is active.
+        </div>
+      )}
 
       {showReveal && (
         <PreparedReveal
@@ -219,6 +379,45 @@ export default function Dashboard() {
           <HealthScore health={health} />
         </div>
 
+        {trialActive && (
+          <div className={`trial-bar ${inWarnWindow ? 'trial-bar-warn' : 'trial-bar-ok'}`}>
+            <div className="trial-bar-row">
+              <span className="trial-bar-label">
+                Your free trial · {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
+              </span>
+              {inWarnWindow && (
+                <button
+                  type="button"
+                  className="trial-bar-cta"
+                  onClick={() => setPaymentOpen(true)}
+                >
+                  Add a payment method to continue →
+                </button>
+              )}
+            </div>
+            <div
+              className="trial-bar-progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={TRIAL_TOTAL_DAYS}
+              aria-valuenow={TRIAL_TOTAL_DAYS - daysRemaining}
+            >
+              <div
+                className="trial-bar-progress-fill"
+                style={{ width: `${Math.min(100, ((TRIAL_TOTAL_DAYS - daysRemaining) / TRIAL_TOTAL_DAYS) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {(() => {
+          if (!promptContext) return null
+          const active = evaluatePrompt({ ...promptContext, dismissed: dismissedPrompts })
+          return active ? (
+            <PromptCard prompt={active} onDismiss={dismissPrompt} />
+          ) : null
+        })()}
+
         <div className="dash-card">
           <h3>Upcoming Maintenance</h3>
           {upcoming.length === 0 ? (
@@ -235,29 +434,94 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="dash-card">
+        <Link
+          to="/tasks"
+          className={`dash-card dash-card-link${openTasks.length === 0 ? ' dash-card-good' : ''}`}
+        >
           <h3>Open Tasks</h3>
           {openTasks.length === 0 ? (
-            <p className="dash-empty">No open tasks</p>
+            <p className="dash-card-status dash-card-status-good">
+              No open tasks ✓
+            </p>
           ) : (
-            <ul className="dash-list">
-              {openTasks.slice(0, 5).map((t) => (
-                <li key={t.id} className="dash-list-row">
-                  <span>{t.title}</span>
-                  {t.due_date && (
-                    <span className="dash-list-meta">{formatDue(t.due_date)}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <p className="dash-list-row">
+              <span>
+                {openTasks.length} {openTasks.length === 1 ? 'task' : 'tasks'} open
+              </span>
+            </p>
           )}
-        </div>
+          <span className="dash-card-link-arrow" aria-hidden="true">Open list →</span>
+        </Link>
+
+        <Link to="/emergency-contacts" className="dash-card dash-card-link">
+          <h3>Emergency Contacts</h3>
+          {contactsCount > 0 ? (
+            <p className="dash-list-row">
+              <span>{contactsCount} {contactsCount === 1 ? 'contact' : 'contacts'} on file</span>
+            </p>
+          ) : (
+            <p className="dash-empty">Add your first contact</p>
+          )}
+          <span className="dash-card-link-arrow" aria-hidden="true">View all →</span>
+        </Link>
+
+        {(() => {
+          const tier = activeCircle?.subscription_tier
+          const locked = tier === 'aware'
+          const complete = !locked && essentialsCovered === ESSENTIAL_TOTAL && ESSENTIAL_TOTAL > 0
+          const partial = !locked && essentialsCovered > 0 && !complete
+          const empty = !locked && essentialsCovered === 0
+          // State drives both the text and the card's left-accent color.
+          const stateClass = locked
+            ? 'dash-card-locked'
+            : complete
+              ? 'dash-card-good'
+              : partial
+                ? 'dash-card-warn'
+                : ''
+          return (
+            <Link
+              to="/documents"
+              className={`dash-card dash-card-link ${stateClass}`.trim()}
+            >
+              <h3>Document Readiness</h3>
+              {locked && (
+                <p className="dash-list-row">
+                  <span aria-hidden="true">🔒</span>
+                  <span> Available with Prepared</span>
+                </p>
+              )}
+              {complete && (
+                <p className="dash-card-status dash-card-status-good">
+                  Essential documents on file ✓
+                </p>
+              )}
+              {partial && (
+                <p className="dash-card-status dash-card-status-warn">
+                  {essentialsCovered} of {ESSENTIAL_TOTAL} essential documents on file
+                </p>
+              )}
+              {empty && (
+                <p className="dash-empty">Add your first document</p>
+              )}
+              <span className="dash-card-link-arrow" aria-hidden="true">
+                {locked ? 'Upgrade to Prepared →' : 'Open vault →'}
+              </span>
+            </Link>
+          )
+        })()}
 
         <div className="dash-card">
           <h3>Recent Activity</h3>
           <p className="dash-empty">Activity feed coming soon</p>
         </div>
       </div>
+
+      <PaymentModal
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSuccess={() => setPaymentToast(true)}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useCircle } from '../context/CircleContext'
+import QuarterlyChecklist from '../components/QuarterlyChecklist'
 
 const GEN_ROLES = ['home_owner', 'circle_manager', 'care_partner']
 
@@ -123,6 +124,8 @@ export default function Maintenance() {
           </button>
         )}
       </div>
+
+      <QuarterlyChecklist tier={activeCircle.subscription_tier} />
 
       {error && <div className="auth-error" role="alert">{error}</div>}
 

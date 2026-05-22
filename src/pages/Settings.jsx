@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { tierLabel } from '../lib/tiers'
+import PaymentModal from '../components/PaymentModal'
+import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
+
+const MS_PER_DAY = 86400000
 
 // Circle pillar = Full → may rename the circle (same matrix as HomeProfile /
 // Circle). Enforced server-side by circles_update (rls_policies_v1.sql).
@@ -191,6 +195,14 @@ export default function Settings() {
     setPrefsNotice('Notification preferences saved.')
   }
 
+  // ── Billing ───────────────────────────────────────────────────────────────
+  const [billingPaymentOpen, setBillingPaymentOpen] = useState(false)
+  const [billingCancelOpen, setBillingCancelOpen] = useState(false)
+  const [billingDowngradeOpen, setBillingDowngradeOpen] = useState(false)
+  const [billingToast, setBillingToast] = useState('')
+  // Stable "now" — Date.now() in render is impure per the strict ruleset.
+  const [billingNowMs] = useState(() => Date.now())
+
   // ── Circle ────────────────────────────────────────────────────────────────
   const [renaming, setRenaming] = useState(false)
   const [circleName, setCircleName] = useState('')
@@ -338,6 +350,131 @@ export default function Settings() {
         )}
       </div>
 
+      {/* Billing — three states keyed off (subscription_tier, billing_status). */}
+      {activeCircle && (() => {
+        const tier = activeCircle.subscription_tier
+        const billing = activeCircle.billing_status
+        const trialEndsAt = activeCircle.trial_ends_at
+          ? new Date(activeCircle.trial_ends_at)
+          : null
+        const periodEndIso = activeCircle.current_period_end
+        const onTrial = billing === 'trial' && trialEndsAt
+        const daysRemaining = onTrial
+          ? Math.max(0, Math.ceil((trialEndsAt.getTime() - billingNowMs) / MS_PER_DAY))
+          : null
+        const isPaidActive = billing === 'active' && tier === 'prepared'
+        const cancelPending = billing === 'canceled' && tier === 'prepared'
+        const isAware = tier === 'aware'
+
+        return (
+          <div className="profile-card">
+            <h3>Billing</h3>
+
+            {billingToast && (
+              <div className="auth-notice" role="status">{billingToast}</div>
+            )}
+
+            {onTrial && (
+              <>
+                <p>
+                  <strong>Free trial</strong> · {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setBillingPaymentOpen(true)}
+                >
+                  Add a payment method to continue →
+                </button>
+              </>
+            )}
+
+            {isPaidActive && (
+              <>
+                <p><strong>Prepared</strong> · $12/month</p>
+                {activeCircle.payment_method_brand && activeCircle.payment_method_last4 && (
+                  <p className="page-placeholder">
+                    {activeCircle.payment_method_brand} ending in{' '}
+                    {activeCircle.payment_method_last4}
+                  </p>
+                )}
+                {periodEndIso && (
+                  <p className="page-placeholder">
+                    Next billing:{' '}
+                    {new Date(periodEndIso).toLocaleDateString(undefined, {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn-link btn-link-danger"
+                  onClick={() => setBillingCancelOpen(true)}
+                >
+                  Cancel subscription
+                </button>
+              </>
+            )}
+
+            {cancelPending && (
+              <>
+                <p><strong>Prepared</strong> · canceling at period end</p>
+                {periodEndIso && (
+                  <p className="page-placeholder">
+                    Access continues through{' '}
+                    {new Date(periodEndIso).toLocaleDateString(undefined, {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    , then switches to the free Aware plan.
+                  </p>
+                )}
+              </>
+            )}
+
+            {isAware && (
+              <>
+                <p>You're on the free Aware plan.</p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setBillingPaymentOpen(true)}
+                >
+                  Upgrade to Prepared →
+                </button>
+              </>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Privacy & Security — read-only reassurance card. Mirrors the trust
+          bar on the Documents page and the public privacy.html section. */}
+      <div className="profile-card">
+        <h3>Your Privacy &amp; Document Security</h3>
+        <p>
+          Documents you upload are encrypted and stored on AWS — the same
+          infrastructure trusted by Amazon, Netflix, and the US federal
+          government.
+        </p>
+        <p>
+          Only members of your family circle can access your documents.
+          NoWorry Home staff cannot view your files.
+        </p>
+        <p>
+          Your documents are backed up automatically. If you need to restore
+          an archived document, contact us within 30 days at{' '}
+          <a href="mailto:support@noworry-home.com">support@noworry-home.com</a>.
+        </p>
+        <p>
+          Your files are never used for advertising, analytics, or AI
+          training — ever.
+        </p>
+      </div>
+
       {/* Circle */}
       <div className="profile-card">
         <div className="card-header">
@@ -392,6 +529,24 @@ export default function Settings() {
           </>
         )}
       </div>
+
+      <PaymentModal
+        open={billingPaymentOpen}
+        onClose={() => setBillingPaymentOpen(false)}
+        onSuccess={() => setBillingToast('Welcome to Prepared! 🎉 Your subscription is active.')}
+      />
+      <DowngradeConfirmModal
+        open={billingCancelOpen}
+        onClose={() => setBillingCancelOpen(false)}
+        onConfirmed={() => setBillingToast('Subscription canceled — you keep access until the end of this period.')}
+        variant="cancel"
+        periodEndIso={activeCircle?.current_period_end}
+      />
+      <DowngradeConfirmModal
+        open={billingDowngradeOpen}
+        onClose={() => setBillingDowngradeOpen(false)}
+        variant="aware"
+      />
     </div>
   )
 }

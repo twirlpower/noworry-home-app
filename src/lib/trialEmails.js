@@ -10,13 +10,16 @@
 
 const DAY_MS = 86400000
 
-export const EMAIL_KEYS = ['day_1', 'day_7', 'day_14', 'day_28']
+export const EMAIL_KEYS = ['day_1', 'day_7', 'day_14', 'day_28', 'day_30']
 
 const OFFSETS = {
   day_1: 1 * DAY_MS,
   day_7: 7 * DAY_MS,
   day_14: 14 * DAY_MS,
   day_28: 28 * DAY_MS,
+  // day_30 fires AT trial end (and on every cron tick after, but trial_emails_sent
+  // stamps it so the second invocation is a no-op).
+  day_30: 30 * DAY_MS,
 }
 
 const SUBJECTS = {
@@ -24,6 +27,7 @@ const SUBJECTS = {
   day_7: 'How\'s your Prepared trial going?',
   day_14: 'You\'re halfway through your Prepared trial',
   day_28: 'Your Prepared trial ends in 3 days',
+  day_30: 'Your NoWorry Home trial has ended',
 }
 
 const APP_URL = 'https://app.noworry-home.com'
@@ -122,5 +126,16 @@ const BUILDERS = {
       <a href="${APP_URL}/settings" style="display: inline-block; background: #3B6D11; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;">Add a payment method →</a>
     </p>
     <p>If you do nothing, your circle goes back to the free Aware tier on ${escapeHtml(formatHumanDate(trialEndsAt))}. Your data stays put — you just lose access to the Prepared features.</p>
+  `),
+
+  day_30: ({ firstName }) => shell(`
+    <h1 style="color: #0A4A30; font-size: 22px; margin: 0 0 12px;">Your NoWorry Home trial has ended, ${escapeHtml(firstName) || 'there'}</h1>
+    <p>Your 30-day trial is complete. Everything you've built is still here — your home profile, documents, and family plan are all saved.</p>
+    <p>To keep access, add a payment method and continue with Prepared for $12/month.</p>
+    <p>
+      <a href="${APP_URL}/dashboard" style="display: inline-block; background: #3B6D11; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;">Continue with Prepared →</a>
+    </p>
+    <p>Or you can continue with the free Aware plan — your home record stays, and you can upgrade anytime.</p>
+    <p>We're here either way.</p>
   `),
 }

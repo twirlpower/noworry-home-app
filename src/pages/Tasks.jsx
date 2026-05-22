@@ -1,7 +1,26 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+
+const NOTE_PREVIEW_CHARS = 80
+const NOTES_FEED_LIMIT = 50
+
+function notePreview(text) {
+  if (!text) return ''
+  if (text.length <= NOTE_PREVIEW_CHARS) return text
+  return text.slice(0, NOTE_PREVIEW_CHARS).trimEnd() + '…'
+}
+
+function formatNoteDate(iso) {
+  const d = new Date(iso)
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
 // Family pillar = Full → may create / edit any task. The assignee can update
 // their own task (e.g. mark complete) even without these roles — enforced
@@ -14,14 +33,6 @@ const PRIORITIES = [
   ['high', 'High'],
   ['urgent', 'Urgent'],
 ]
-
-const STATUS_LABELS = {
-  open: 'Open',
-  assigned: 'Assigned',
-  in_progress: 'In progress',
-  complete: 'Complete',
-  cancelled: 'Cancelled',
-}
 
 const EMPTY_FORM = {
   title: '',
@@ -69,28 +80,40 @@ export default function Tasks() {
   const { person } = useAuth()
   const { activeCircle, membership } = useCircle()
   const canManage = MANAGE_ROLES.includes(membership?.role)
+  const tier = activeCircle?.subscription_tier
+  const isPreparedOrBetter = tier && tier !== 'aware'
 
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
+  const [notes, setNotes] = useState([])
   // Derived loading flag (no setState in effect body — strict ruleset).
   const [loadedFor, setLoadedFor] = useState(null)
-  const loading = !!activeCircle && loadedFor !== activeCircle.id
+  const loading = !!activeCircle && isPreparedOrBetter && loadedFor !== activeCircle.id
 
   const [editingId, setEditingId] = useState(null) // null | 'new' | <uuid>
+  const [expandedId, setExpandedId] = useState(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
 
+  // ── Family Notes feed (separate input + posting state) ────────────────────
+  const [noteDraft, setNoteDraft] = useState('')
+  const [postingNote, setPostingNote] = useState(false)
+  const [noteError, setNoteError] = useState('')
+
   useEffect(() => {
-    if (!activeCircle) return
+    if (!activeCircle || !isPreparedOrBetter) return
     let cancelled = false
     const circleId = activeCircle.id
 
-    // Two parallel reads. tasks: embed assignee via the FK column name so
+    // Three parallel reads. tasks: embed assignee via the FK column name so
     // PostgREST disambiguates assigned_to vs created_by (PGRST201, same
     // pattern as 72e6eb8 on circle_memberships). members: only 'active'
     // memberships are assignable; 'invited' rows belong on the Circle page.
+    // notes: family-notes feed (migration 020); embed author for display.
     Promise.all([
       supabase
         .from('tasks')
@@ -106,7 +129,13 @@ export default function Tasks() {
         .select('persons!person_id (id, first_name, last_name)')
         .eq('circle_id', circleId)
         .eq('status', 'active'),
-    ]).then(([taskRes, memberRes]) => {
+      supabase
+        .from('notes')
+        .select('id, content, created_at, author:persons!author_id (id, first_name, last_name)')
+        .eq('circle_id', circleId)
+        .order('created_at', { ascending: false })
+        .limit(NOTES_FEED_LIMIT),
+    ]).then(([taskRes, memberRes, notesRes]) => {
       if (cancelled) return
       if (taskRes.error) {
         setError(rlsHint(taskRes.error.message))
@@ -119,13 +148,23 @@ export default function Tasks() {
         .map((m) => m.persons)
         .filter(Boolean)
       setMembers(ppl)
+      // Notes failures shouldn't break the tasks page — surface inline.
+      if (notesRes.error) {
+        setNoteError(notesRes.error.message?.match(/row-level security|permission denied/i)
+          ? 'The notes security policy is not deployed. Run migrations/020_notes_rls.sql in Supabase.'
+          : notesRes.error.message)
+        setNotes([])
+      } else {
+        setNoteError('')
+        setNotes(notesRes.data ?? [])
+      }
       setLoadedFor(circleId)
     })
 
     return () => {
       cancelled = true
     }
-  }, [activeCircle])
+  }, [activeCircle, isPreparedOrBetter])
 
   async function reloadTasks() {
     const { data, error: e } = await supabase
@@ -232,6 +271,49 @@ export default function Tasks() {
     await reloadTasks()
   }
 
+  // Soft-cancel: migration 009 deliberately has no DELETE policy. We set
+  // status='cancelled' and rely on the existing .neq('status','cancelled')
+  // filter to drop it from the visible list.
+  async function removeTask(t) {
+    setConfirmRemoveId(null)
+    setExpandedId(null)
+    const { error: e } = await supabase
+      .from('tasks')
+      .update({ status: 'cancelled' })
+      .eq('id', t.id)
+    if (e) {
+      setError(rlsHint(e.message))
+      return
+    }
+    setNotice(`Removed "${t.title}".`)
+    await reloadTasks()
+  }
+
+  async function postNote(e) {
+    e.preventDefault()
+    const content = noteDraft.trim()
+    if (!content) return
+    setPostingNote(true)
+    setNoteError('')
+    const { data, error: insErr } = await supabase
+      .from('notes')
+      .insert({
+        circle_id: activeCircle.id,
+        author_id: person.id,
+        content,
+      })
+      .select('id, content, created_at, author:persons!author_id (id, first_name, last_name)')
+      .single()
+    if (insErr) {
+      setNoteError(rlsHint(insErr.message))
+      setPostingNote(false)
+      return
+    }
+    setNotes((prev) => [data, ...prev])
+    setNoteDraft('')
+    setPostingNote(false)
+  }
+
   function assigneeName(t) {
     if (!t.assignee) return 'Unassigned'
     return `${t.assignee.first_name} ${t.assignee.last_name}`.trim()
@@ -246,6 +328,31 @@ export default function Tasks() {
       <div className="page">
         <h1>Tasks</h1>
         <p className="page-placeholder">You don't have a Home Circle yet.</p>
+      </div>
+    )
+  }
+
+  // Aware-tier upgrade gate — Prepared feature. Sends users back to /dashboard
+  // where PreparedReveal owns the conversion moment (same pattern as
+  // EmergencyContacts).
+  if (!isPreparedOrBetter) {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <h1>Tasks</h1>
+        </div>
+        <div className="ec-upgrade">
+          <h2 className="ec-upgrade-title">
+            Stay on top of what needs doing — together.
+          </h2>
+          <p className="ec-upgrade-body">
+            Task management is part of your Prepared plan. Coordinate repairs,
+            errands, and to-dos with your family in one shared list.
+          </p>
+          <Link to="/dashboard" className="btn-primary-full">
+            Try Prepared free for 30 days →
+          </Link>
+        </div>
       </div>
     )
   }
@@ -276,6 +383,7 @@ export default function Tasks() {
       </div>
 
       {error && <div className="auth-error" role="alert">{error}</div>}
+      {notice && <div className="auth-notice" role="status">{notice}</div>}
 
       {editingId !== null && (
         <form onSubmit={handleSave} className="profile-section">
@@ -294,7 +402,7 @@ export default function Tasks() {
             />
           </label>
           <label className="form-label">
-            Description (optional)
+            Notes (optional)
             <textarea
               value={form.description}
               onChange={(e) => setField('description', e.target.value)}
@@ -353,46 +461,91 @@ export default function Tasks() {
         <h3>Open ({open.length})</h3>
         {open.length === 0 ? (
           <p className="page-placeholder">
-            {canManage
-              ? 'No open tasks. Add one to coordinate with your family.'
-              : 'No open tasks for this circle.'}
+            No tasks yet. Add your first one — whether it's a repair to
+            schedule, a document to find, or something to talk about at the
+            next visit.
           </p>
         ) : (
-          <ul className="systems-list">
+          <ul className="task-list">
             {open.map((t) => {
               const due = formatDue(t.due_date)
+              const isExpanded = expandedId === t.id
+              const isConfirming = confirmRemoveId === t.id
+              const preview = notePreview(t.description)
               return (
-                <li key={t.id} className="system-row">
-                  <div className="system-main">
-                    <span className="system-name">{t.title}</span>
-                    <span className="system-meta">
-                      {assigneeName(t)}
-                      {' · '}
-                      {STATUS_LABELS[t.status] ?? t.status}
-                      {t.priority !== 'medium' && ` · ${PRIORITIES.find(([v]) => v === t.priority)?.[1]} priority`}
-                      {due && (
-                        <>
-                          {' · '}
-                          <span className={due.overdue ? 'task-due-overdue' : ''}>{due.label}</span>
-                        </>
+                <li key={t.id} className="task-item">
+                  <div className="task-row">
+                    <label className="task-checkbox" aria-label={`Mark "${t.title}" complete`}>
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => markComplete(t)}
+                        disabled={!canActOn(t)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="task-body"
+                      onClick={() => setExpandedId(isExpanded ? null : t.id)}
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="task-title">{t.title}</span>
+                      <span className="task-meta">
+                        {assigneeName(t)}
+                        {due && (
+                          <>
+                            {' · '}
+                            <span className={due.overdue ? 'task-due-overdue' : ''}>{due.label}</span>
+                          </>
+                        )}
+                        {t.priority !== 'medium' && (
+                          ` · ${PRIORITIES.find(([v]) => v === t.priority)?.[1]} priority`
+                        )}
+                      </span>
+                      {preview && (
+                        <span className="task-preview">{preview}</span>
                       )}
-                    </span>
-                    {t.description && (
-                      <span className="system-meta task-desc">{t.description}</span>
-                    )}
+                    </button>
                   </div>
-                  <div className="system-actions">
-                    {canActOn(t) && (
-                      <button className="btn-link" onClick={() => markComplete(t)}>
-                        Mark complete
-                      </button>
-                    )}
-                    {canManage && editingId === null && (
-                      <button className="btn-link" onClick={() => openEdit(t)}>
-                        Edit
-                      </button>
-                    )}
-                  </div>
+                  {isExpanded && (
+                    <div className="task-expand">
+                      {t.description && (
+                        <p className="task-expand-notes">{t.description}</p>
+                      )}
+                      <div className="task-expand-actions">
+                        {canManage && editingId === null && !isConfirming && (
+                          <button className="btn-link" onClick={() => openEdit(t)}>
+                            Edit
+                          </button>
+                        )}
+                        {canManage && !isConfirming && (
+                          <button
+                            className="btn-link btn-link-danger"
+                            onClick={() => setConfirmRemoveId(t.id)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                        {isConfirming && (
+                          <span className="task-confirm" role="alert">
+                            Remove this task?
+                            <button
+                              className="btn-link"
+                              onClick={() => setConfirmRemoveId(null)}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn-link btn-link-danger"
+                              onClick={() => removeTask(t)}
+                            >
+                              Yes, remove
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </li>
               )
             })}
@@ -412,32 +565,86 @@ export default function Tasks() {
             </button>
           </div>
           {showCompleted && (
-            <ul className="systems-list">
+            <ul className="task-list">
               {completed.map((t) => (
-                <li key={t.id} className="system-row">
-                  <div className="system-main">
-                    <span className="system-name">{t.title}</span>
-                    <span className="system-meta">
-                      {assigneeName(t)}
-                      {' · Completed'}
-                      {t.completed_at && (
-                        ' · ' + new Date(t.completed_at).toLocaleDateString()
-                      )}
-                    </span>
-                  </div>
-                  {canActOn(t) && (
-                    <div className="system-actions">
-                      <button className="btn-link" onClick={() => reopenTask(t)}>
-                        Reopen
-                      </button>
+                <li key={t.id} className="task-item task-completed">
+                  <div className="task-row">
+                    <label className="task-checkbox" aria-label={`Reopen "${t.title}"`}>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => reopenTask(t)}
+                        disabled={!canActOn(t)}
+                      />
+                    </label>
+                    <div className="task-body task-body-static">
+                      <span className="task-title">{t.title}</span>
+                      <span className="task-meta">
+                        {assigneeName(t)}
+                        {' · Completed'}
+                        {t.completed_at && (
+                          ' · ' + new Date(t.completed_at).toLocaleDateString()
+                        )}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </div>
       )}
+
+      {/* Family Notes feed — append-only, separate notes table (migration 020). */}
+      <div className="profile-card">
+        <h3>Family Notes</h3>
+        <p className="page-placeholder">Leave a note for your circle.</p>
+
+        {noteError && <div className="auth-error" role="alert">{noteError}</div>}
+
+        {canManage && (
+          <form onSubmit={postNote} className="note-form">
+            <label className="sr-only" htmlFor="note-draft">New family note</label>
+            <textarea
+              id="note-draft"
+              className="form-input"
+              rows={3}
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              placeholder="A quick update, a question, something to remember…"
+              disabled={postingNote}
+            />
+            <button
+              type="submit"
+              className="btn-secondary"
+              disabled={postingNote || !noteDraft.trim()}
+            >
+              {postingNote ? 'Posting…' : 'Post'}
+            </button>
+          </form>
+        )}
+
+        {notes.length === 0 ? (
+          <p className="page-placeholder">No notes yet. Leave a note for your family.</p>
+        ) : (
+          <ul className="note-feed">
+            {notes.map((n) => {
+              const authorName = n.author
+                ? `${n.author.first_name} ${n.author.last_name}`.trim()
+                : 'A circle member'
+              return (
+                <li key={n.id} className="note-item">
+                  <div className="note-header">
+                    <span className="note-author">{authorName}</span>
+                    <span className="note-date">{formatNoteDate(n.created_at)}</span>
+                  </div>
+                  <p className="note-content">{n.content}</p>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }

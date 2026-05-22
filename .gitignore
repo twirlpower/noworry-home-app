@@ -5,3 +5,11 @@ dist
 .DS_Store
 *.log
 .claude/settings.local.json
+
+# Secrets / credentials living loose in docs (use .env.local instead)
+docs/Stripe.txt
+docs/*-keys.*
+docs/*-secret*.*
+
+# Nested marketing-site repo (lives in its own git remote)
+noworry-home-site/

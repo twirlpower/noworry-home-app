@@ -144,7 +144,9 @@ export default function Documents() {
   }
 
   async function archiveDoc(d) {
-    if (!window.confirm(`Archive "${d.title}"? It will be hidden from this list.`)) return
+    if (!window.confirm(
+      `Remove "${d.title}" from your vault? You can contact us within 30 days if you need it restored.`
+    )) return
     const { error: e } = await supabase
       .from('documents')
       .update({ is_archived: true })
@@ -153,7 +155,7 @@ export default function Documents() {
       setError(dbErrorHint(e.message))
       return
     }
-    setNotice(`Archived "${d.title}".`)
+    setNotice('Removed from your vault. Contact us within 30 days if you need it restored.')
     await reloadDocs()
   }
 
@@ -199,6 +201,16 @@ export default function Documents() {
 
   return (
     <div className="page">
+      <div className="doc-trust-bar" role="note">
+        <span className="doc-trust-icon" aria-hidden="true">🔒</span>
+        <p>
+          Your documents are encrypted and stored securely on AWS. Only your
+          family circle can access them — not NoWorry Home staff, not anyone
+          else. Backed up automatically so nothing is ever permanently lost.
+          Contact us within 30 days to restore a deleted document.
+        </p>
+      </div>
+
       <div className="page-header">
         <h1>Documents</h1>
         {canManage && !showForm && (
