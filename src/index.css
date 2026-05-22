@@ -1232,6 +1232,44 @@ textarea.form-input {
   line-height: 1.5;
 }
 
+/* Promo code row inside the PaymentModal. Sits between the CardElement
+   and the submit button. */
+.promo-code-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.promo-code-input {
+  font-family: var(--font);
+  font-size: 0.95rem;
+  padding: 0.7rem 0.95rem;
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--text);
+  width: 100%;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.promo-code-input:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+.promo-success {
+  font-size: 0.85rem;
+  color: var(--deep);
+  font-weight: 600;
+}
+
+.promo-error {
+  font-size: 0.85rem;
+  color: var(--red-text);
+}
+
 .btn-back-danger {
   color: var(--red-text);
 }
@@ -1987,6 +2025,63 @@ textarea.form-input {
   flex-direction: column;
   gap: 0.2rem;
   margin-top: 0.2rem;
+}
+
+/* Bottom of the admin nav: subtle link to flip into Member View. */
+.view-as-member-link {
+  display: block;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border: none;
+  border-top: 1px dashed var(--cool);
+  background: none;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.view-as-member-link:hover {
+  color: var(--deep);
+}
+
+/* Banner shown at the TOP of the sidebar when staff is in Member View.
+   Always visible, full-width inside the nav padding. */
+.admin-mode-banner {
+  background: #EAF3DE;
+  color: #1B5E38;
+  border: 1px solid #C9DDB1;
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.9rem;
+  margin: 0.5rem 0.8rem 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.admin-mode-banner button {
+  background: #1B5E38;
+  color: var(--white);
+  border: none;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.admin-mode-banner button:hover {
+  background: #0A4A30;
 }
 
 /* Admin page shell */

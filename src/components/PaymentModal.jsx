@@ -30,11 +30,17 @@ function PaymentForm({ onSuccess, onCancel }) {
   const { activeCircle, applyCircleUpdate } = useCircle()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [promoCode, setPromoCode] = useState('')
+  // Server returns { id, name, description } when a coupon was applied.
+  const [promoApplied, setPromoApplied] = useState(null)
+  const [promoError, setPromoError] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!stripe || !elements) return
     setError('')
+    setPromoError('')
+    setPromoApplied(null)
     setSubmitting(true)
 
     // Step 1: collect the card and mint a PaymentMethod token. The card
@@ -68,6 +74,7 @@ function PaymentForm({ onSuccess, onCancel }) {
         body: JSON.stringify({
           paymentMethodId: pmResult.paymentMethod.id,
           circleId: activeCircle.id,
+          ...(promoCode ? { promoCode } : {}),
         }),
       })
     } catch {
@@ -78,7 +85,13 @@ function PaymentForm({ onSuccess, onCancel }) {
 
     const payload = await res.json().catch(() => ({}))
     if (!res.ok || !payload.ok) {
-      setError(payload.detail || 'Payment processing failed. Please try again.')
+      // Promo-specific error surfaces in-line on the promo field, not in
+      // the top banner. Other errors stay in the banner.
+      if (payload.error === 'Invalid promo code') {
+        setPromoError("That code isn't valid. Check the spelling and try again.")
+      } else {
+        setError(payload.detail || 'Payment processing failed. Please try again.')
+      }
       setSubmitting(false)
       return
     }
@@ -96,7 +109,16 @@ function PaymentForm({ onSuccess, onCancel }) {
       current_period_end: payload.current_period_end ?? null,
     })
     setSubmitting(false)
-    onSuccess?.()
+
+    // If a coupon was applied, flash the green confirmation in the modal
+    // briefly before closing so the user sees the discount they got.
+    // Without a coupon, close immediately (existing UX).
+    if (payload.coupon) {
+      setPromoApplied(payload.coupon)
+      setTimeout(() => onSuccess?.(), 1500)
+    } else {
+      onSuccess?.()
+    }
   }
 
   return (
@@ -110,6 +132,29 @@ function PaymentForm({ onSuccess, onCancel }) {
 
       <div className="payment-card-field">
         <CardElement options={CARD_OPTIONS} />
+      </div>
+
+      <div className="promo-code-row">
+        <input
+          type="text"
+          className="promo-code-input"
+          placeholder="Promo code (optional)"
+          value={promoCode}
+          onChange={(e) => {
+            setPromoCode(e.target.value.toUpperCase().trim())
+            if (promoError) setPromoError('')
+          }}
+          disabled={submitting}
+          autoComplete="off"
+        />
+        {promoApplied && (
+          <span className="promo-success">
+            ✓ {promoApplied.name} applied — {promoApplied.description}
+          </span>
+        )}
+        {promoError && (
+          <span className="promo-error">{promoError}</span>
+        )}
       </div>
 
       <button

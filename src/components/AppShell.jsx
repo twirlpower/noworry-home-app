@@ -5,6 +5,7 @@ import { useCircle } from '../context/CircleContext'
 import { useStaffRole } from '../hooks/useStaffRole'
 
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
+const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
 
 export default function AppShell() {
   const { person, signOut } = useAuth()
@@ -13,17 +14,42 @@ export default function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Staff can temporarily flip into "View as Member" mode to dogfood the
+  // member experience. localStorage is the source of truth; viewMode mirrors
+  // it as React state so the redirect effect re-runs when it changes and
+  // the banner can render conditionally.
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem(MEMBER_VIEW_KEY) === 'member' ? 'member' : 'admin'
+    } catch {
+      return 'admin'
+    }
+  })
+
+  function enterMemberView() {
+    try { localStorage.setItem(MEMBER_VIEW_KEY, 'member') } catch { /* ignore */ }
+    setViewMode('member')
+    navigate('/dashboard')
+  }
+  function exitMemberView() {
+    try { localStorage.setItem(MEMBER_VIEW_KEY, 'admin') } catch { /* ignore */ }
+    setViewMode('admin')
+    navigate('/admin/crm')
+  }
+
   // Defense-in-depth: even though RootRedirect routes staff to /admin/crm,
   // a staff member could still reach a member page via a bookmark, browser
   // back, or pasted URL. Bounce them back to admin. Wait on staffLoading
-  // so we don't redirect during the initial Supabase lookup (which would
-  // misread legitimate staff as members on the first render).
+  // so we don't redirect during the initial Supabase lookup. Skip entirely
+  // when the staff user has opted into member view.
   useEffect(() => {
     if (staffLoading) return
-    if (isStaff && !location.pathname.startsWith('/admin')) {
+    if (!isStaff) return
+    if (viewMode === 'member') return
+    if (!location.pathname.startsWith('/admin')) {
       navigate('/admin/crm', { replace: true })
     }
-  }, [isStaff, staffLoading, location.pathname, navigate])
+  }, [isStaff, staffLoading, viewMode, location.pathname, navigate])
 
   // localStorage read is synchronous and cheap; lazy init keeps it out of an effect.
   const [adminOpen, setAdminOpen] = useState(() => {
@@ -55,6 +81,15 @@ export default function AppShell() {
     <div className="app-shell">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <nav className="app-nav" aria-label="Primary">
+        {isStaff && viewMode === 'member' && (
+          <div className="admin-mode-banner" role="status">
+            <span>🔧 Admin Mode</span>
+            <button type="button" onClick={exitMemberView}>
+              Back to Admin →
+            </button>
+          </div>
+        )}
+
         <div className="app-nav-brand">
           <img src="/images/logo.png" alt="NoWorry Home" className="app-nav-logo" />
         </div>
@@ -152,6 +187,13 @@ export default function AppShell() {
                         <span aria-hidden="true">⚙️</span> Admin Settings
                       </NavLink>
                     )}
+                    <button
+                      type="button"
+                      className="view-as-member-link"
+                      onClick={enterMemberView}
+                    >
+                      <span aria-hidden="true">👤</span> View as Member →
+                    </button>
                   </div>
                 )}
               </div>

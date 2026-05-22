@@ -32,6 +32,26 @@ import {
 
 const BILLING_ROLES = new Set(['home_owner', 'circle_manager', 'care_partner', 'care_coordinator'])
 
+// Formats a Stripe coupon into a single short display string. Prefers the
+// coupon's own metadata.description so admins can write custom copy
+// ("Family & friends — 20% forever"), but falls back to a generated
+// summary if no metadata is set.
+function formatDiscount(coupon) {
+  if (coupon?.percent_off) {
+    const suffix =
+      coupon.duration === 'repeating'
+        ? ` for ${coupon.duration_in_months} months`
+        : coupon.duration === 'forever'
+          ? ' forever'
+          : ' first payment'
+    return `${coupon.percent_off}% off${suffix}`
+  }
+  if (coupon?.amount_off) {
+    return `$${(coupon.amount_off / 100).toFixed(2)} off`
+  }
+  return 'Discount applied'
+}
+
 function badRequest(res, code, detail) {
   return res.status(400).json({ error: code, ...(detail ? { detail } : {}) })
 }
@@ -64,10 +84,16 @@ export default async function handler(req, res) {
   }
 
   const body = req.body ?? {}
-  const { paymentMethodId, circleId } = body
+  const { paymentMethodId, circleId, promoCode: rawPromo } = body
   if (!paymentMethodId || !circleId) {
     return badRequest(res, 'missing_fields', 'paymentMethodId and circleId are required')
   }
+  // Normalize: uppercase + strip whitespace so the lookup matches whatever
+  // the admin entered in the Stripe Dashboard, and an empty string is
+  // treated as "no code".
+  const promoCode = typeof rawPromo === 'string' && rawPromo.trim()
+    ? rawPromo.trim().toUpperCase()
+    : null
 
   // ── Auth: verify the Supabase JWT and pull the acting person ─────────────
   const auth = req.headers?.authorization ?? ''
@@ -126,6 +152,26 @@ export default async function handler(req, res) {
   // ── Stripe ops ───────────────────────────────────────────────────────────
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' })
 
+  // Validate the promo code first. Doing this BEFORE any customer/payment-
+  // method work means an invalid code fails fast with no Stripe-side
+  // side effects to clean up.
+  let validatedCoupon = null
+  if (promoCode) {
+    try {
+      const c = await stripe.coupons.retrieve(promoCode)
+      // A coupon can be retrieved while inactive (deleted=true or valid=false).
+      // Reject those — only currently-redeemable codes count.
+      if (!c?.valid) {
+        return res.status(400).json({ error: 'Invalid promo code' })
+      }
+      validatedCoupon = c
+    } catch (e) {
+      // Stripe returns 404 / resource_missing for an unknown coupon id.
+      console.warn('[stripe/create-subscription] coupon lookup failed', e?.code, e?.message)
+      return res.status(400).json({ error: 'Invalid promo code' })
+    }
+  }
+
   let customerId = circle.stripe_customer_id
   try {
     if (!customerId) {
@@ -143,12 +189,18 @@ export default async function handler(req, res) {
       invoice_settings: { default_payment_method: paymentMethodId },
     })
 
+    // Use the newer `discounts` array shape rather than the deprecated
+    // `coupon` top-level parameter on subscriptions.create.
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: process.env.STRIPE_PRICE_PREPARED }],
       default_payment_method: paymentMethodId,
       expand: ['latest_invoice.payment_intent'],
-      metadata: { circle_id: circle.id },
+      metadata: {
+        circle_id: circle.id,
+        ...(validatedCoupon ? { promo_code: validatedCoupon.id } : {}),
+      },
+      ...(validatedCoupon ? { discounts: [{ coupon: validatedCoupon.id }] } : {}),
     })
 
     // Pull card details for display ("Visa ending in 4242"). PaymentMethod
@@ -231,6 +283,14 @@ export default async function handler(req, res) {
       payment_method_last4: last4,
       payment_method_brand: brand,
       current_period_end: periodEndIso,
+      coupon: validatedCoupon
+        ? {
+            id: validatedCoupon.id,
+            name: validatedCoupon.name || validatedCoupon.id,
+            description:
+              validatedCoupon.metadata?.description || formatDiscount(validatedCoupon),
+          }
+        : null,
     })
   } catch (e) {
     // Stripe surfaces user-friendly messages on e.message (card declined,
