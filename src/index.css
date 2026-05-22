@@ -2588,6 +2588,71 @@ textarea.form-input {
 
 .heat-sidebar-total strong { font-size: 1.6rem; }
 
+/* Clickable variants — Link components in the sidebar that navigate to
+   /admin/members with a tier filter. Visually identical to the non-link
+   versions except for the hover affordance. */
+.heat-sidebar-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.15s;
+}
+.heat-sidebar-link:hover { color: var(--teal); }
+
+.heat-tier-link {
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.15rem 0;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.heat-tier-link:hover {
+  background: var(--off-white);
+}
+
+/* ── ADMIN MEMBER LIST ──────────────────────────────────────────────────── */
+.member-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem 1.2rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.member-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.member-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 140px;
+}
+
+.member-filter-search { flex: 1; min-width: 200px; }
+
+.member-filter-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.member-filter-field .form-input {
+  font-size: 0.92rem;
+  padding: 0.5rem 0.7rem;
+}
+
 .heat-tier-bars {
   list-style: none;
   display: flex;

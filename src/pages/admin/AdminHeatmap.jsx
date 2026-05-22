@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -289,9 +290,9 @@ export default function AdminHeatmap() {
 
         <aside className="heat-sidebar">
           <h3>Filtered totals</h3>
-          <p className="heat-sidebar-total">
-            <strong>{stats.total.toLocaleString()}</strong> member{stats.total === 1 ? '' : 's'} shown
-          </p>
+          <Link to="/admin/members" className="heat-sidebar-total heat-sidebar-link">
+            <strong>{stats.total.toLocaleString()}</strong> member{stats.total === 1 ? '' : 's'} shown →
+          </Link>
 
           <ul className="heat-tier-bars">
             {TIERS.map(([k, l, c]) => {
@@ -299,11 +300,11 @@ export default function AdminHeatmap() {
               const pct = stats.total > 0 ? (n / stats.total) * 100 : 0
               return (
                 <li key={k}>
-                  <div className="heat-tier-row">
+                  <Link to={`/admin/members?tier=${k}`} className="heat-tier-row heat-tier-link">
                     <span className="heat-tier-dot" style={{ background: c }} />
                     <span className="heat-tier-label">{l}</span>
                     <span className="heat-tier-count">{n}</span>
-                  </div>
+                  </Link>
                   <div className="heat-tier-bar">
                     <div
                       className="heat-tier-bar-fill"

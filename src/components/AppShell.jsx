@@ -177,6 +177,9 @@ export default function AppShell() {
                         <span aria-hidden="true">🔧</span> Maintenance
                       </NavLink>
                     )}
+                    <NavLink to="/admin/members" className="nav-link">
+                      <span aria-hidden="true">👥</span> Members
+                    </NavLink>
                     {isOwner && (
                       <NavLink to="/admin/finance" className="nav-link">
                         <span aria-hidden="true">💰</span> Finance

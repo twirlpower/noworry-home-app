@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 
 const MS_PER_DAY = 86400000
@@ -312,9 +313,9 @@ export default function AdminProperties() {
                                 ? 'Unflag'
                                 : 'Flag for Refresh'}
                           </button>
-                          <span className="admin-meta" title="Coming soon — admin member list view">
-                            View Homes (soon)
-                          </span>
+                          <Link to={`/admin/members?zip=${z.zip}`} className="btn-link">
+                            View Homes
+                          </Link>
                         </div>
                       </td>
                     </tr>
