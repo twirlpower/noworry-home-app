@@ -80,6 +80,11 @@ export default function Tasks() {
   const { person } = useAuth()
   const { activeCircle, membership } = useCircle()
   const canManage = MANAGE_ROLES.includes(membership?.role)
+  // Notes feed accepts any active circle member (including family_member,
+  // who's the prototypical adult-child-in-Chicago poster). Server-side
+  // RLS is the source of truth — notes_insert was widened in migration
+  // 031 to match — this flag just controls whether the form renders.
+  const isActiveMember = membership?.status === 'active'
   const tier = activeCircle?.subscription_tier
   const isPreparedOrBetter = tier && tier !== 'aware'
 
@@ -602,7 +607,7 @@ export default function Tasks() {
 
         {noteError && <div className="auth-error" role="alert">{noteError}</div>}
 
-        {canManage && (
+        {isActiveMember && (
           <form onSubmit={postNote} className="note-form">
             <label className="sr-only" htmlFor="note-draft">New family note</label>
             <textarea
