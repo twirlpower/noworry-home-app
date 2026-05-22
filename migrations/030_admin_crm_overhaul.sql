@@ -51,32 +51,10 @@ comment on column crm_partners.preferred_contact is
 
 
 -- ── 3. normalize_address(text) — JS-parity SQL ──────────────────────────────
--- Mirrors src/lib/normalizeAddress.js. IMMUTABLE so a partial index over the
--- expression would be possible, though we materialize via a generated column
--- + trigger below instead for simpler client queries.
-create or replace function public.normalize_address(p_input text)
-returns text
-language sql
-immutable
-set search_path = public
-as $$
-  select regexp_replace(
-    regexp_replace(translate(upper(coalesce(trim(p_input), '')), '.,#', '   '),
-      '\m(STREET|AVENUE|BOULEVARD|DRIVE|COURT|LANE|ROAD|PLACE|CIRCLE|TERRACE|WAY)\M',
-      case
-        -- Postgres regexp_replace doesn't do conditional replacement in one
-        -- pass — fall back to a CASE on the matched word in the inner select.
-        -- Doing the inner expansion below.
-        else ''
-      end, 'g'
-    ),
-  '\s+', ' ', 'g')
-$$;
-
--- The above single-pass approach can't conditionally pick the replacement
--- per matched word in Postgres regexp_replace. Replace with a real chained
--- expansion that maps each long form to its abbreviation. IMMUTABLE,
--- search_path-locked, JS-parity.
+-- Mirrors src/lib/normalizeAddress.js. Chained regexp_replace expansion
+-- maps each long-form street type to its USPS-style abbreviation (a
+-- single-pass approach can't conditionally pick the replacement per
+-- matched word in Postgres). IMMUTABLE, search_path-locked.
 create or replace function public.normalize_address(p_input text)
 returns text
 language sql
