@@ -130,6 +130,11 @@ export default function AppShell() {
                       <span aria-hidden="true">🗂</span> CRM
                     </NavLink>
                     {isOwner && (
+                      <NavLink to="/admin/properties" className="nav-link">
+                        <span aria-hidden="true">🏘</span> Properties
+                      </NavLink>
+                    )}
+                    {isOwner && (
                       <NavLink to="/admin/settings" className="nav-link">
                         <span aria-hidden="true">⚙️</span> Admin Settings
                       </NavLink>

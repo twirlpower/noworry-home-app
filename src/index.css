@@ -2259,6 +2259,43 @@ textarea.form-input {
 .admin-stat-warn .admin-stat-value { color: var(--amber-text); }
 .admin-stat-warn { border-color: #F0D699; background: #FBF3E3; }
 
+/* Property-page stat tones layered on the admin-stat base. */
+.prop-stat-good     { border-color: var(--muted-teal); background: #E1F5EE; }
+.prop-stat-good .admin-stat-value     { color: var(--deep); }
+.prop-stat-warn     { border-color: #F0D699; background: #FBF3E3; }
+.prop-stat-warn .admin-stat-value     { color: var(--amber-text); }
+.prop-stat-danger   { border-color: #F4C8B5; background: #FDE3DA; }
+.prop-stat-danger .admin-stat-value   { color: var(--red-text); }
+.prop-stat-neutral  { /* uses defaults */ }
+
+/* Property status pills (layered on .admin-pill). */
+.prop-pill-good    { color: var(--deep);      background: #DDF3E9; }
+.prop-pill-warn    { color: var(--amber-text); background: #FBF3E3; }
+.prop-pill-danger  { color: var(--red-text);  background: #FDE3DA; }
+.prop-pill-neutral { color: var(--muted);     background: var(--cool); }
+
+.prop-filter-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.prop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-start;
+}
+
+.prop-map-placeholder {
+  background: var(--off-white);
+  border-style: dashed;
+}
+.prop-map-placeholder h2 { color: var(--muted); }
+.prop-map-placeholder p  { color: var(--muted); }
+
 .admin-stat-clickable {
   cursor: pointer;
   font-family: var(--font);

@@ -19,6 +19,7 @@ import EmergencyContacts from './pages/EmergencyContacts'
 import Settings from './pages/Settings'
 import AdminCRM from './pages/admin/AdminCRM'
 import AdminSettings from './pages/admin/AdminSettings'
+import AdminProperties from './pages/admin/AdminProperties'
 import { useStaffRole } from './hooks/useStaffRole'
 import { useCircle } from './context/CircleContext'
 
@@ -87,6 +88,9 @@ export default function App() {
               } />
               <Route path="admin/settings" element={
                 <AdminRoute requireOwner><AdminSettings /></AdminRoute>
+              } />
+              <Route path="admin/properties" element={
+                <AdminRoute requireOwner><AdminProperties /></AdminRoute>
               } />
             </Route>
 
