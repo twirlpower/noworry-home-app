@@ -3,11 +3,13 @@ import { supabase } from '../../lib/supabase'
 import CRMContactsTab from '../../components/admin/CRMContactsTab'
 import CRMPartnersTab from '../../components/admin/CRMPartnersTab'
 import CRMVendorsTab from '../../components/admin/CRMVendorsTab'
+import CRMMaintenanceTab from '../../components/admin/CRMMaintenanceTab'
 
 const TABS = [
   ['contacts', 'Contacts'],
   ['partners', 'Partners'],
   ['vendors', 'Vendors'],
+  ['maintenance', 'Maintenance'],
 ]
 
 export default function AdminCRM() {
@@ -94,6 +96,7 @@ export default function AdminCRM() {
         {tab === 'contacts' && <CRMContactsTab onChange={bumpStats} />}
         {tab === 'partners' && <CRMPartnersTab onChange={bumpStats} />}
         {tab === 'vendors' && <CRMVendorsTab onChange={bumpStats} />}
+        {tab === 'maintenance' && <CRMMaintenanceTab onChange={bumpStats} />}
       </div>
     </div>
   )
