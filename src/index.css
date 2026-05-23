@@ -4357,3 +4357,51 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   cursor: pointer;
 }
 .install-prompt-secondary:hover { color: var(--text); border-color: var(--clay); }
+
+/* ── Trusted Advisor grant management (Circle.jsx) ──────────────────────── */
+.advisor-grants-panel {
+  margin-top: 0.7rem;
+  padding: 1rem 1.1rem;
+  background: #FBF3E3;
+  border-left: 4px solid var(--gold);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.advisor-grants-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--amber-text);
+  margin-bottom: 0.3rem;
+}
+.advisor-grants-help {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0.9rem;
+}
+.advisor-grants-section {
+  margin-bottom: 0.9rem;
+}
+.advisor-grants-section:last-child { margin-bottom: 0; }
+.advisor-grants-section-h {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--deep);
+  margin-bottom: 0.4rem;
+}
+.advisor-grants-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-height: 36px;
+}
+.advisor-grants-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--teal);
+  flex-shrink: 0;
+}

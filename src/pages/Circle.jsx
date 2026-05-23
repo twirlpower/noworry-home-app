@@ -8,6 +8,10 @@ import { RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '../utils/homeDisplayName'
 // Roles allowed to edit a homeowner's pronouns. Circle managers and the
 // home owner themselves can change it; everyone else just reads.
 const PRONOUN_EDIT_ROLES = new Set(['home_owner', 'circle_manager'])
+
+// Roles allowed to manage trusted_advisor grants (migration 040). Same
+// set the DB enforces in advisor_grants_admin_select / _write / _update.
+const GRANT_ADMIN_ROLES = new Set(['home_owner', 'circle_manager'])
 import RoleSelect from '../components/RoleSelect'
 
 // Family pillar = Full → can manage members (Family Graph matrix).
@@ -230,6 +234,7 @@ export default function Circle() {
         <ul className="member-list">
           {members.map((m) => {
             const canEditPronouns = m.role === 'home_owner' && PRONOUN_EDIT_ROLES.has(membership?.role)
+            const showGrantPanel = m.role === 'trusted_advisor' && GRANT_ADMIN_ROLES.has(membership?.role)
             return (
               <li key={m.id} className="member-row">
                 <div className="member-main">
@@ -255,6 +260,13 @@ export default function Circle() {
                       ))}
                     </div>
                   )}
+                  {showGrantPanel && (
+                    <TrustedAdvisorGrants
+                      advisor={m}
+                      circleId={activeCircle.id}
+                      grantedByPersonId={person.id}
+                    />
+                  )}
                 </div>
                 <span className={`member-status status-${m.status}`}>{m.status}</span>
               </li>
@@ -265,3 +277,158 @@ export default function Circle() {
     </div>
   )
 }
+
+// Inline grant-management panel rendered for each trusted_advisor member
+// when the viewer is a circle admin. Lets the admin toggle access to
+// individual documents and emergency contacts; revocation flips
+// revoked_at on the existing grant row (we keep history, never delete).
+function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
+  const [documents, setDocuments] = useState([])
+  const [contacts, setContacts] = useState([])
+  const [grants, setGrants] = useState({ document: new Set(), emergency_contact: new Set() })
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    if (!advisor?.person_id || !circleId) return
+    let cancelled = false
+    async function load() {
+      const [docsRes, ecRes, grantsRes] = await Promise.all([
+        supabase.from('documents').select('id, label, type, is_archived').eq('circle_id', circleId),
+        supabase.from('emergency_contacts').select('id, label, name').eq('circle_id', circleId),
+        supabase.from('advisor_grants')
+          .select('resource_type, resource_id')
+          .eq('circle_id', circleId)
+          .eq('advisor_person_id', advisor.person_id)
+          .is('revoked_at', null),
+      ])
+      if (cancelled) return
+      // Filter archived docs out of the grant chooser — granting access
+      // to a soft-deleted doc isn't useful.
+      setDocuments((docsRes.data ?? []).filter((d) => !d.is_archived))
+      setContacts(ecRes.data ?? [])
+      const next = { document: new Set(), emergency_contact: new Set() }
+      for (const g of grantsRes.data ?? []) {
+        if (next[g.resource_type]) next[g.resource_type].add(g.resource_id)
+      }
+      setGrants(next)
+      setLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [advisor?.person_id, circleId])
+
+  async function toggleGrant(resourceType, resourceId, currentlyGranted) {
+    if (busy) return
+    setBusy(true); setErr('')
+    if (currentlyGranted) {
+      const { error } = await supabase
+        .from('advisor_grants')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('circle_id', circleId)
+        .eq('advisor_person_id', advisor.person_id)
+        .eq('resource_type', resourceType)
+        .eq('resource_id', resourceId)
+        .is('revoked_at', null)
+      if (error) { setErr(error.message); setBusy(false); return }
+      setGrants((g) => {
+        const next = { ...g, [resourceType]: new Set(g[resourceType]) }
+        next[resourceType].delete(resourceId)
+        return next
+      })
+    } else {
+      const { error } = await supabase.from('advisor_grants').insert({
+        circle_id:           circleId,
+        advisor_person_id:   advisor.person_id,
+        resource_type:       resourceType,
+        resource_id:         resourceId,
+        granted_by:          grantedByPersonId,
+      })
+      if (error) {
+        // 23505 = unique constraint violation — likely a previously-
+        // revoked grant. Re-open it by clearing revoked_at instead.
+        if (error.code === '23505') {
+          const { error: upErr } = await supabase
+            .from('advisor_grants')
+            .update({ revoked_at: null, granted_at: new Date().toISOString(), granted_by: grantedByPersonId })
+            .eq('circle_id', circleId)
+            .eq('advisor_person_id', advisor.person_id)
+            .eq('resource_type', resourceType)
+            .eq('resource_id', resourceId)
+          if (upErr) { setErr(upErr.message); setBusy(false); return }
+        } else {
+          setErr(error.message); setBusy(false); return
+        }
+      }
+      setGrants((g) => {
+        const next = { ...g, [resourceType]: new Set(g[resourceType]) }
+        next[resourceType].add(resourceId)
+        return next
+      })
+    }
+    setBusy(false)
+  }
+
+  if (loading) return <p className="page-placeholder">Loading grants…</p>
+
+  return (
+    <div className="advisor-grants-panel">
+      <p className="advisor-grants-title">Trusted Advisor — granted access only</p>
+      <p className="advisor-grants-help">
+        This person sees nothing by default. Check items below to grant
+        access. Grants are logged and can be revoked at any time.
+      </p>
+
+      {err && <div className="auth-error" role="alert">{err}</div>}
+
+      {documents.length > 0 && (
+        <div className="advisor-grants-section">
+          <p className="advisor-grants-section-h">Documents</p>
+          {documents.map((doc) => {
+            const granted = grants.document.has(doc.id)
+            return (
+              <label key={doc.id} className="advisor-grants-row">
+                <input
+                  type="checkbox"
+                  checked={granted}
+                  disabled={busy}
+                  onChange={() => toggleGrant('document', doc.id, granted)}
+                />
+                <span>{doc.label || doc.type || '(untitled)'}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+
+      {contacts.length > 0 && (
+        <div className="advisor-grants-section">
+          <p className="advisor-grants-section-h">Emergency Contacts</p>
+          {contacts.map((c) => {
+            const granted = grants.emergency_contact.has(c.id)
+            return (
+              <label key={c.id} className="advisor-grants-row">
+                <input
+                  type="checkbox"
+                  checked={granted}
+                  disabled={busy}
+                  onChange={() => toggleGrant('emergency_contact', c.id, granted)}
+                />
+                <span>{c.label || c.name || '(unnamed)'}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+
+      {documents.length === 0 && contacts.length === 0 && (
+        <p className="page-placeholder">
+          Add documents or emergency contacts to this circle first, then
+          you can grant access here.
+        </p>
+      )}
+    </div>
+  )
+}
+
