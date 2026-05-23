@@ -42,6 +42,21 @@ export default function Onboarding() {
   const [bedrooms, setBedrooms] = useState('')
   const [bathrooms, setBathrooms] = useState('')
 
+  // Home classification (Part A — drives property_tier).
+  // Stories field uses string values for the radio form; we coerce
+  // to integer when saving. dryer_vent_exit is one of:
+  //   'ground_wall' | 'second_floor_wall' | 'roof' | 'unknown'
+  const [storiesAns, setStoriesAns] = useState('')
+  const [hvacAns, setHvacAns] = useState('')
+  const [ventAns, setVentAns] = useState('')
+
+  // Computed property tier from the three answers. Enhanced if 2+ HVAC
+  // systems OR the dryer vent exits through the roof. Never displayed
+  // to the member by name; only used to drive pricing copy.
+  const propertyTier = (
+    (Number(hvacAns) >= 2) || ventAns === 'roof'
+  ) ? 'enhanced' : 'standard'
+
   // Address autocomplete from home_seeds (Arapahoe/Douglas assessor data).
   const [suggestions, setSuggestions] = useState([])
   const [selectedSeed, setSelectedSeed] = useState(null)
@@ -181,10 +196,11 @@ export default function Onboarding() {
       return
     }
 
-    // Best-effort: persist seed extras that the bootstrap RPC doesn't take
-    // (stories on the home; HVAC/roof as home_systems for maintenance gen).
-    // Non-fatal — onboarding already succeeded; failures just skip the extras.
-    if (selectedSeed && circleId) {
+    // Best-effort: persist seed extras + the classification answers from
+    // the new home-tier step. The bootstrap RPC's p_home contract doesn't
+    // take these fields, so we patch them in via a follow-up update on
+    // homes. Non-fatal — onboarding already succeeded if we got here.
+    if (circleId) {
       try {
         const { data: ch } = await supabase
           .from('circle_homes')
@@ -194,18 +210,28 @@ export default function Onboarding() {
           .limit(1)
         const homeId = ch?.[0]?.home_id
         if (homeId) {
-          if (selectedSeed.stories) {
-            await supabase
-              .from('homes')
-              .update({ stories: selectedSeed.stories })
-              .eq('id', homeId)
+          // Build the classification patch, overlaying onto seed extras
+          // when present. Tier-input answers always win over the seed
+          // since the user explicitly chose them.
+          const patch = {}
+          if (storiesAns)            patch.stories             = Number(storiesAns)
+          else if (selectedSeed?.stories) patch.stories         = selectedSeed.stories
+          if (hvacAns)               patch.hvac_system_count   = Number(hvacAns)
+          if (ventAns)               patch.dryer_vent_exit     = ventAns
+          if (storiesAns && hvacAns && ventAns) patch.property_tier = propertyTier
+
+          if (Object.keys(patch).length) {
+            await supabase.from('homes').update(patch).eq('id', homeId)
           }
-          const sys = []
-          if (selectedSeed.hvac_type)
-            sys.push({ home_id: homeId, system_type: 'hvac', name: selectedSeed.hvac_type })
-          if (selectedSeed.roof_type)
-            sys.push({ home_id: homeId, system_type: 'roof', name: selectedSeed.roof_type })
-          if (sys.length) await supabase.from('home_systems').insert(sys)
+
+          if (selectedSeed) {
+            const sys = []
+            if (selectedSeed.hvac_type)
+              sys.push({ home_id: homeId, system_type: 'hvac', name: selectedSeed.hvac_type })
+            if (selectedSeed.roof_type)
+              sys.push({ home_id: homeId, system_type: 'roof', name: selectedSeed.roof_type })
+            if (sys.length) await supabase.from('home_systems').insert(sys)
+          }
         }
       } catch {
         /* extras are convenience only — ignore */
@@ -456,6 +482,142 @@ export default function Onboarding() {
     )
   }
 
+  // Step: Home classification (Part A). Three questions that drive
+  // property_tier. Each radio sets a string answer; the Continue button
+  // is gated on all three being filled. Standard → handleComplete;
+  // enhanced → setStep('enhanced-info') to show the rate explanation
+  // first.
+  if (step === 'classification') {
+    const allAnswered = storiesAns && hvacAns && ventAns
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>Tell us about your home</h1>
+          <p className="auth-subtitle">This helps us make sure your plan covers everything correctly.</p>
+
+          <fieldset className="classify-group">
+            <legend>How many floors does your home have?</legend>
+            {[
+              ['1', '1 story'],
+              ['2', '2 stories'],
+              ['3', '3 or more stories'],
+            ].map(([v, l]) => (
+              <label key={v} className={`classify-radio ${storiesAns === v ? 'on' : ''}`}>
+                <input type="radio" name="stories" value={v}
+                  checked={storiesAns === v}
+                  onChange={() => setStoriesAns(v)} />
+                <span>{l}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="classify-group">
+            <legend>How many heating and cooling systems does your home have?</legend>
+            <p className="classify-help">(A furnace + AC unit = 1 system)</p>
+            {[
+              ['1', '1 system'],
+              ['2', '2 systems (e.g. upstairs + downstairs)'],
+              ['3', '3 or more systems'],
+            ].map(([v, l]) => (
+              <label key={v} className={`classify-radio ${hvacAns === v ? 'on' : ''}`}>
+                <input type="radio" name="hvac" value={v}
+                  checked={hvacAns === v}
+                  onChange={() => setHvacAns(v)} />
+                <span>{l}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          <fieldset className="classify-group">
+            <legend>Where does your dryer vent exit the house?</legend>
+            {[
+              ['ground_wall',       'Through a ground floor or basement wall (most common)'],
+              ['second_floor_wall', 'Through a second floor wall'],
+              ['roof',              'Through the roof'],
+              ['unknown',           "I'm not sure"],
+            ].map(([v, l]) => (
+              <label key={v} className={`classify-radio ${ventAns === v ? 'on' : ''}`}>
+                <input type="radio" name="vent" value={v}
+                  checked={ventAns === v}
+                  onChange={() => setVentAns(v)} />
+                <span>{l}</span>
+              </label>
+            ))}
+          </fieldset>
+
+          {error && <div className="auth-error" role="alert">{error}</div>}
+
+          <button
+            type="button"
+            className="btn-primary-full"
+            disabled={!allAnswered || loading}
+            onClick={(e) => {
+              if (!allAnswered) return
+              // If enhanced, surface the explanation first; otherwise
+              // jump straight to circle creation.
+              if (propertyTier === 'enhanced') {
+                setStep('enhanced-info')
+              } else {
+                handleComplete(e)
+              }
+            }}
+          >
+            {loading ? 'Setting up your Home Circle...' : 'Continue →'}
+          </button>
+
+          <button className="btn-back" onClick={() => setStep('home')}>
+            ← Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Step: Enhanced rate explanation. Only reached when the answers
+  // resolved to property_tier='enhanced'. Reason text is derived
+  // from which condition tripped enhanced (HVAC count vs vent on
+  // roof) — multiple conditions are OK, we surface the most relevant.
+  if (step === 'enhanced-info') {
+    const reason = Number(hvacAns) >= 2
+      ? `Your home has ${hvacAns === '3' ? '3 or more' : hvacAns} HVAC systems`
+      : 'Your dryer vent exits through the roof'
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>Your home qualifies for our Enhanced rate</h1>
+          <div className="enhanced-rate-card">
+            <p>
+              {reason} — so we make sure your plan covers it completely.
+            </p>
+            <ul className="enhanced-rate-list">
+              <li><strong>Covered Enhanced:</strong> $129/mo</li>
+              <li><strong>Complete Enhanced:</strong> $219/mo</li>
+            </ul>
+            <p className="auth-subtitle">
+              Everything else about your membership is identical — same visits,
+              same services, same guarantee.
+            </p>
+          </div>
+
+          {error && <div className="auth-error" role="alert">{error}</div>}
+
+          <button
+            type="button"
+            className="btn-primary-full"
+            disabled={loading}
+            onClick={handleComplete}
+          >
+            {loading ? 'Setting up your Home Circle...' : 'Continue →'}
+          </button>
+
+          <button className="btn-back" onClick={() => setStep('classification')}>
+            ← Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Step: Home profile
   return (
     <div className="auth-page">
@@ -478,7 +640,15 @@ export default function Onboarding() {
           </div>
         )}
 
-        <form onSubmit={handleComplete}>
+        <form onSubmit={(e) => {
+          e.preventDefault()
+          // Address-uniqueness probe runs in handleComplete; we replicate
+          // here so we don't advance into classification with a known
+          // conflict still on screen. handleComplete also runs the check
+          // a second time as a belt-and-suspenders defense.
+          if (addressConflict) return
+          setStep('classification')
+        }}>
           <label className="form-label">
             Street address
             <div className="seed-combo">
@@ -565,7 +735,7 @@ export default function Onboarding() {
             </div>
           ) : (
             <button type="submit" className="btn-primary-full" disabled={loading}>
-              {loading ? 'Setting up your Home Circle...' : 'Create My Home Circle'}
+              {loading ? 'Setting up your Home Circle...' : 'Continue →'}
             </button>
           )}
         </form>

@@ -16,6 +16,33 @@ import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
 const MS_PER_DAY = 86400000
 const TRIAL_TOTAL_DAYS = 30
 const TRIAL_WARN_DAYS = 7
+// Day-60 partner banner triggers when a 90-day partner trial has 30 or
+// fewer days left — keeps members ahead of the day-89 reminder cron.
+const PARTNER_BANNER_DAYS_REMAINING = 30
+
+// Monthly charge amounts by tier × cycle. Used to render
+// "your card will be charged $X on [date]" in the trial bar. Annual
+// amounts come straight from the matrix; monthly is the per-month
+// price. Property tier (standard vs enhanced) isn't on family_circles
+// yet, so for v1 we display the standard amount — enhanced members
+// see their precise number in Settings billing.
+const TRIAL_CHARGE_AMOUNTS = {
+  prepared: { monthly: 12 },
+  covered:  { monthly: 99,  annual: 1068 },
+  complete: { monthly: 179, annual: 2148 },
+}
+
+function fmtMoney(n) {
+  if (n == null || isNaN(n)) return ''
+  return n >= 1000
+    ? `$${n.toLocaleString()}`
+    : `$${n}`
+}
+
+function fmtTrialDate(d) {
+  if (!d) return ''
+  return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+}
 
 const ESSENTIAL_TOTAL = CRITICAL_TYPE_KEYS.length
 const DISMISSED_PROMPTS_KEY = 'nwh-dismissed-prompts'
@@ -305,6 +332,22 @@ export default function Dashboard() {
   const inWarnWindow = trialActive && daysRemaining <= TRIAL_WARN_DAYS
   const showExpiredInterstitial = onTrial && trialExpired
 
+  // Charge amount + date for the new "your card will be charged $X on
+  // DATE" copy in the trial bar. Falls back gracefully if the matrix
+  // doesn't cover the user's tier (older rows without billing_cycle).
+  const trialDaysTotal = activeCircle.trial_days || TRIAL_TOTAL_DAYS
+  const trialCycle = activeCircle.billing_cycle === 'annual' ? 'annual' : 'monthly'
+  const trialChargeAmount = trialActive
+    ? TRIAL_CHARGE_AMOUNTS[activeCircle.subscription_tier]?.[trialCycle] ?? null
+    : null
+  const trialChargeAmountLabel = trialChargeAmount != null
+    ? `${fmtMoney(trialChargeAmount)}${trialCycle === 'annual' ? ' (annual)' : ''}`
+    : ''
+  // Partner-trial day-60 banner: only on 90-day trials, only when
+  // there are 30 or fewer days remaining.
+  const showPartnerBanner =
+    trialActive && trialDaysTotal === 90 && daysRemaining <= PARTNER_BANNER_DAYS_REMAINING
+
   // Trial-expired interstitial — replaces the normal dashboard content.
   if (showExpiredInterstitial) {
     return (
@@ -379,11 +422,23 @@ export default function Dashboard() {
           <HealthScore health={health} />
         </div>
 
+        {showPartnerBanner && (
+          <div className="partner-trial-banner" role="status">
+            Your trial ends in {daysRemaining} day{daysRemaining === 1 ? '' : 's'} —
+            {' '}you'll be charged {trialChargeAmountLabel || '—'} on {fmtTrialDate(trialEndsAt)}.
+            Cancel anytime in Settings.
+          </div>
+        )}
         {trialActive && (
           <div className={`trial-bar ${inWarnWindow ? 'trial-bar-warn' : 'trial-bar-ok'}`}>
             <div className="trial-bar-row">
               <span className="trial-bar-label">
-                Your free trial · {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
+                {daysRemaining} day{daysRemaining === 1 ? '' : 's'} left in your free trial
+                {trialChargeAmount != null && trialEndsAt && (
+                  <span className="trial-bar-charge">
+                    {' — your card will be charged '}{trialChargeAmountLabel}{' on '}{fmtTrialDate(trialEndsAt)}
+                  </span>
+                )}
               </span>
               {inWarnWindow && (
                 <button
@@ -399,12 +454,12 @@ export default function Dashboard() {
               className="trial-bar-progress"
               role="progressbar"
               aria-valuemin={0}
-              aria-valuemax={TRIAL_TOTAL_DAYS}
-              aria-valuenow={TRIAL_TOTAL_DAYS - daysRemaining}
+              aria-valuemax={trialDaysTotal}
+              aria-valuenow={trialDaysTotal - daysRemaining}
             >
               <div
                 className="trial-bar-progress-fill"
-                style={{ width: `${Math.min(100, ((TRIAL_TOTAL_DAYS - daysRemaining) / TRIAL_TOTAL_DAYS) * 100)}%` }}
+                style={{ width: `${Math.min(100, ((trialDaysTotal - daysRemaining) / trialDaysTotal) * 100)}%` }}
               />
             </div>
           </div>

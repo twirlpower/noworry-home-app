@@ -32,6 +32,43 @@ import {
 
 const BILLING_ROLES = new Set(['home_owner', 'circle_manager', 'care_partner', 'care_coordinator'])
 
+// Resolve a Stripe price ID from (tier, propertyTier, billingCycle). Each
+// covered/complete tier has up to four env vars; prepared has only the
+// legacy STRIPE_PRICE_PREPARED. Returns null when the selected combo
+// isn't configured — the caller decides whether to fall back to monthly
+// or 500.
+function getPriceId(tier, propertyTier, billingCycle) {
+  const isEnhanced = propertyTier === 'enhanced'
+  const isAnnual = billingCycle === 'annual'
+
+  if (tier === 'prepared') {
+    // Prepared has only the one historical env var. No annual / no
+    // enhanced variant — same SKU regardless of property tier.
+    return process.env.STRIPE_PRICE_PREPARED || null
+  }
+  if (tier === 'covered') {
+    if (isAnnual) {
+      return (isEnhanced
+        ? process.env.STRIPE_PRICE_COVERED_ENHANCED_ANNUAL
+        : process.env.STRIPE_PRICE_COVERED_ANNUAL) || null
+    }
+    return (isEnhanced
+      ? process.env.STRIPE_PRICE_COVERED_ENHANCED_MONTHLY
+      : process.env.STRIPE_PRICE_COVERED_MONTHLY) || null
+  }
+  if (tier === 'complete') {
+    if (isAnnual) {
+      return (isEnhanced
+        ? process.env.STRIPE_PRICE_COMPLETE_ENHANCED_ANNUAL
+        : process.env.STRIPE_PRICE_COMPLETE_ANNUAL) || null
+    }
+    return (isEnhanced
+      ? process.env.STRIPE_PRICE_COMPLETE_ENHANCED_MONTHLY
+      : process.env.STRIPE_PRICE_COMPLETE_MONTHLY) || null
+  }
+  return null
+}
+
 // Formats a Stripe coupon into a single short display string. Prefers the
 // coupon's own metadata.description so admins can write custom copy
 // ("Family & friends — 20% forever"), but falls back to a generated
@@ -79,15 +116,25 @@ export default async function handler(req, res) {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return serverError(res, 'supabase_env_missing')
   }
-  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_PRICE_PREPARED) {
+  if (!process.env.STRIPE_SECRET_KEY) {
     return serverError(res, 'stripe_env_missing')
   }
 
   const body = req.body ?? {}
-  const { paymentMethodId, circleId, promoCode: rawPromo } = body
+  const {
+    paymentMethodId,
+    circleId,
+    promoCode: rawPromo,
+    tier: rawTier,
+    billingCycle: rawCycle,
+  } = body
   if (!paymentMethodId || !circleId) {
     return badRequest(res, 'missing_fields', 'paymentMethodId and circleId are required')
   }
+  // Default to the legacy prepared/monthly behavior so existing callers
+  // (Dashboard trial-to-paid flow) keep working without a client change.
+  const tier = (rawTier === 'covered' || rawTier === 'complete') ? rawTier : 'prepared'
+  let billingCycle = rawCycle === 'annual' ? 'annual' : 'monthly'
   // Normalize: uppercase + strip whitespace so the lookup matches whatever
   // the admin entered in the Stripe Dashboard, and an empty string is
   // treated as "no code".
@@ -149,6 +196,36 @@ export default async function handler(req, res) {
     })
   }
 
+  // ── Fetch property_tier for this circle's primary home ──────────────────
+  // Drives whether Covered/Complete uses the Standard or Enhanced price.
+  // Server-side lookup so the client can't tamper with pricing. Defaults
+  // to 'standard' if no home record / no tier set (older circles).
+  let propertyTier = 'standard'
+  {
+    const { data: ch } = await admin
+      .from('circle_homes')
+      .select('homes(property_tier)')
+      .eq('circle_id', circleId)
+      .eq('status', 'active')
+      .eq('is_primary', true)
+      .maybeSingle()
+    if (ch?.homes?.property_tier === 'enhanced') propertyTier = 'enhanced'
+  }
+
+  // Resolve the actual Stripe price ID. If the user picked annual but no
+  // annual env is configured for this tier, silently fall back to
+  // monthly (per spec — never error on missing annual env).
+  let priceId = getPriceId(tier, propertyTier, billingCycle)
+  if (!priceId && billingCycle === 'annual') {
+    billingCycle = 'monthly'
+    priceId = getPriceId(tier, propertyTier, billingCycle)
+  }
+  if (!priceId) {
+    return serverError(res, 'price_env_missing', {
+      message: `No Stripe price configured for tier=${tier} property=${propertyTier} cycle=${billingCycle}`,
+    })
+  }
+
   // ── Stripe ops ───────────────────────────────────────────────────────────
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' })
 
@@ -203,16 +280,29 @@ export default async function handler(req, res) {
       invoice_settings: { default_payment_method: paymentMethodId },
     })
 
+    // Partner promo trial: promotion codes flagged with
+    // metadata.partner_trial = 'true' grant a 90-day Stripe trial. Any
+    // other (or no) promo: the standard 30-day trial. Stored on
+    // family_circles.trial_days so the Dashboard / Settings UI can
+    // render the right countdown copy.
+    const isPartnerTrial = promoCodeObj?.metadata?.partner_trial === 'true'
+    const trialDays = isPartnerTrial ? 90 : 30
+
     // discounts uses promotion_code (the customer-facing wrapper), not
     // coupon. promoCodeObj.code is the human-typed value (e.g. FOUNDER);
     // promoCodeObj.id is the prefixed Stripe id (e.g. promo_xxx).
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
-      items: [{ price: process.env.STRIPE_PRICE_PREPARED }],
+      items: [{ price: priceId }],
       default_payment_method: paymentMethodId,
+      trial_period_days: trialDays,
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         circle_id: circle.id,
+        tier,
+        property_tier: propertyTier,
+        billing_cycle: billingCycle,
+        trial_days: String(trialDays),
         ...(promoCodeObj ? { promo_code: promoCodeObj.code } : {}),
       },
       ...(promoCodeObj ? { discounts: [{ promotion_code: promoCodeObj.id }] } : {}),
@@ -235,16 +325,24 @@ export default async function handler(req, res) {
       ? new Date(subscription.current_period_end * 1000).toISOString()
       : null
 
-    // subscription_tier flip handles the Aware → Prepared upgrade path too;
-    // an in-trial circle is already on 'prepared' so the SET is a no-op for
-    // that case.
+    // Stripe subscription.status === 'trialing' while inside the trial
+    // window — reflect that on family_circles so the Dashboard countdown
+    // and Settings billing block render the right state.
+    const billingStatus = subscription.status === 'trialing' ? 'trial' : 'active'
+    const trialEndsAtIso = subscription.trial_end
+      ? new Date(subscription.trial_end * 1000).toISOString()
+      : null
+
     const { error: updErr } = await admin
       .from('family_circles')
       .update({
-        subscription_tier: 'prepared',
+        subscription_tier: tier,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
-        billing_status: 'active',
+        billing_status: billingStatus,
+        billing_cycle: billingCycle,
+        trial_days: trialDays,
+        ...(trialEndsAtIso ? { trial_ends_at: trialEndsAtIso } : {}),
         payment_method_last4: last4,
         payment_method_brand: brand,
         current_period_end: periodEndIso,
@@ -313,7 +411,12 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       stripe_subscription_id: subscription.id,
-      billing_status: 'active',
+      subscription_tier: tier,
+      billing_status: billingStatus,
+      billing_cycle: billingCycle,
+      trial_days: trialDays,
+      trial_ends_at: trialEndsAtIso,
+      property_tier: propertyTier,
       payment_method_last4: last4,
       payment_method_brand: brand,
       current_period_end: periodEndIso,

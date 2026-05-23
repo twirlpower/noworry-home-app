@@ -3853,3 +3853,137 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   flex-direction: column;
   gap: 0.15rem;
 }
+
+/* ── ONBOARDING — home classification step ──────────────────────────────── */
+.classify-group {
+  border: none;
+  padding: 0;
+  margin: 0 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.classify-group legend {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+.classify-help {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+  font-style: italic;
+}
+.classify-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 52px;
+  padding: 0.7rem 1rem;
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius);
+  background: var(--white);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.classify-radio input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--teal);
+  flex-shrink: 0;
+}
+.classify-radio.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+
+.enhanced-rate-card {
+  background: #FBF3E3;
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0 1.4rem;
+}
+.enhanced-rate-list {
+  list-style: none;
+  margin: 0.7rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 17px;
+}
+
+/* ── PAYMENT MODAL — billing-cycle toggle ───────────────────────────────── */
+.billing-cycle-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.billing-cycle-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 64px;
+  padding: 0.7rem 0.9rem;
+  background: var(--white);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.billing-cycle-pill.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+.billing-cycle-name { font-size: 1rem; }
+.billing-cycle-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--deep);
+}
+.billing-cycle-price {
+  text-align: center;
+  margin-bottom: 0.9rem;
+  font-size: 1.1rem;
+}
+.billing-cycle-price strong {
+  display: block;
+  color: var(--deep);
+  font-size: 1.4rem;
+}
+.billing-cycle-permo {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ── DASHBOARD — partner-trial banner + trial-bar charge line ───────────── */
+.partner-trial-banner {
+  background: #FBF3E3;
+  border-left: 4px solid var(--gold);
+  color: var(--amber-text);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.8rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.trial-bar-charge {
+  font-weight: 600;
+  color: var(--text);
+}

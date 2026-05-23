@@ -9,6 +9,22 @@ import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
 
 const MS_PER_DAY = 86400000
 
+// Display labels for the active-subscription block on the billing card.
+// Keep flat — Settings doesn't need the per-property-tier resolution
+// that PaymentModal does; the column for property_tier isn't on the
+// circle, so the standard amount is the safe display.
+const BILLING_DISPLAY = {
+  prepared: { monthly: 'Prepared · $12/month' },
+  covered:  {
+    monthly: 'Covered · $99/month',
+    annual:  'Covered · $1,068/year ($89/mo average)',
+  },
+  complete: {
+    monthly: 'Complete · $179/month',
+    annual:  'Complete · $2,148/year ($179/mo average)',
+  },
+}
+
 // Circle pillar = Full → may rename the circle (same matrix as HomeProfile /
 // Circle). Enforced server-side by circles_update (rls_policies_v1.sql).
 // care_coordinator is the v1.5 rename of care_partner (migration 014);
@@ -362,9 +378,11 @@ export default function Settings() {
         const daysRemaining = onTrial
           ? Math.max(0, Math.ceil((trialEndsAt.getTime() - billingNowMs) / MS_PER_DAY))
           : null
-        const isPaidActive = billing === 'active' && tier === 'prepared'
-        const cancelPending = billing === 'canceled' && tier === 'prepared'
+        const isPaidActive = billing === 'active' && (tier === 'prepared' || tier === 'covered' || tier === 'complete')
+        const cancelPending = billing === 'canceled' && (tier === 'prepared' || tier === 'covered' || tier === 'complete')
         const isAware = tier === 'aware'
+        const cycle = activeCircle.billing_cycle === 'annual' ? 'annual' : 'monthly'
+        const billingLine = BILLING_DISPLAY[tier]?.[cycle] || BILLING_DISPLAY[tier]?.monthly || `${tier} · $—`
 
         return (
           <div className="profile-card">
@@ -391,7 +409,7 @@ export default function Settings() {
 
             {isPaidActive && (
               <>
-                <p><strong>Prepared</strong> · $12/month</p>
+                <p><strong>{billingLine.split(' · ')[0]}</strong> · {billingLine.split(' · ')[1] ?? ''}</p>
                 {activeCircle.payment_method_brand && activeCircle.payment_method_last4 && (
                   <p className="page-placeholder">
                     {activeCircle.payment_method_brand} ending in{' '}
@@ -415,6 +433,11 @@ export default function Settings() {
                 >
                   Cancel subscription
                 </button>
+                <p className="page-placeholder" style={{ marginTop: '0.5rem' }}>
+                  To cancel before your trial ends, contact us at{' '}
+                  <a href="mailto:hello@noworry-home.com">hello@noworry-home.com</a>
+                  {' '}or cancel directly here.
+                </p>
               </>
             )}
 
