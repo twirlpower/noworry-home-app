@@ -89,7 +89,7 @@ function rlsHint(message) {
 
 export default function Settings() {
   const { person, refreshPerson } = useAuth()
-  const { activeCircle, membership, applyCircleUpdate } = useCircle()
+  const { activeCircle, membership, applyCircleUpdate, reloadCircles } = useCircle()
   const canRename = RENAME_ROLES.includes(membership?.role)
 
   // ── About You (identity) ──────────────────────────────────────────────────
@@ -117,9 +117,13 @@ export default function Settings() {
     setIdentitySaving(false)
     if (!idErr) {
       setIdentitySaved(true)
-      // refreshPerson updates the AuthContext cache so other surfaces
-      // (Dashboard greeting, switcher) reflect the new pronouns.
+      // refreshPerson updates the AuthContext cache. reloadCircles
+      // re-decorates each circle's homeowners[] from persons (where
+      // we just wrote gender), so the AppShell switcher and Dashboard
+      // greeting pick up the new pronouns immediately when the saver
+      // is a homeowner on the active circle.
       refreshPerson?.()
+      reloadCircles?.()
       setTimeout(() => setIdentitySaved(false), 3000)
     }
   }

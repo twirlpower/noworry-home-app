@@ -18,7 +18,7 @@ const MANAGE_ROLES = ['home_owner', 'circle_manager', 'care_partner', 'care_coor
 
 export default function Circle() {
   const { person } = useAuth()
-  const { activeCircle, membership } = useCircle()
+  const { activeCircle, membership, reloadCircles } = useCircle()
   const canManage = MANAGE_ROLES.includes(membership?.role)
 
   const [members, setMembers] = useState([])
@@ -67,7 +67,13 @@ export default function Circle() {
       .from('persons')
       .update({ gender: newGender })
       .eq('id', personId)
-    if (!gErr) await reloadMembers()
+    if (!gErr) {
+      await reloadMembers()
+      // Also refresh CircleContext so the AppShell switcher + Dashboard
+      // greeting pick up the new pronouns immediately (the homeowners[]
+      // array is decorated by loadCircles, not by reloadMembers above).
+      reloadCircles?.()
+    }
   }
 
   async function reloadMembers() {

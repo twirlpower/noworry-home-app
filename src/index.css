@@ -4269,3 +4269,91 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   margin-top: 2rem;
   font-style: italic;
 }
+
+/* ── PWA install prompt ─────────────────────────────────────────────────── */
+.install-prompt {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(10, 74, 48, 0.18);
+  padding: 1.1rem 1.2rem;
+  z-index: 1000;
+  font-family: var(--font);
+}
+
+.install-prompt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.install-prompt-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--deep);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.install-prompt-body { flex: 1; }
+
+.install-prompt-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+.install-prompt-text {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0.8rem;
+}
+
+.install-prompt-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.install-prompt-primary {
+  min-height: 44px;
+  padding: 0.55rem 1.1rem;
+  background: var(--teal);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.install-prompt-primary:hover { background: var(--dark-teal); }
+
+.install-prompt-secondary {
+  min-height: 44px;
+  padding: 0.55rem 1.1rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--cool);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.install-prompt-secondary:hover { color: var(--text); border-color: var(--clay); }

@@ -7,6 +7,7 @@ import { useHomeTechRole } from '../hooks/useHomeTechRole'
 import { useStaffMode } from '../context/StaffModeContext'
 import { useView } from '../context/ViewContext'
 import { VIEW_LABELS, VIEW_DESCRIPTIONS, VIEW_DEFAULT_PATH } from '../utils/availableViews'
+import InstallPrompt from './InstallPrompt'
 
 const VIEW_TIP_KEY = 'noworry:viewSwitcherSeen'
 import { getHomeDisplayName } from '../utils/homeDisplayName'
@@ -297,6 +298,8 @@ export default function AppShell() {
       <main className="app-main" id="main-content">
         <Outlet />
       </main>
+
+      <InstallPrompt />
     </div>
   )
 }
