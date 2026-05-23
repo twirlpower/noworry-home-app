@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { normalizeAddress } from '../lib/normalizeAddress'
+import { RELATIONSHIP_OPTIONS } from '../utils/homeDisplayName'
 
 export default function Onboarding() {
   const location = useLocation()
@@ -30,7 +31,13 @@ export default function Onboarding() {
   // Home Owner info (for "setting up for someone else")
   const [ownerFirst, setOwnerFirst] = useState('')
   const [ownerLast, setOwnerLast] = useState('')
-  const [ownerRelationship, setOwnerRelationship] = useState('')
+  // Path B picker — structured relationship that drives the personalized
+  // home-display name. 'adult_child' is the most common case; the user
+  // confirms their choice on the picker. Replaces the prior freeform
+  // ownerRelationship dropdown (which got passed into p_owner_relationship
+  // — we now send null there since the picker value lives on
+  // circle_memberships.relationship_kind instead).
+  const [relationshipKind, setRelationshipKind] = useState('adult_child')
 
   // Home profile
   const [address, setAddress] = useState('')
@@ -187,13 +194,33 @@ export default function Onboarding() {
       },
       p_owner_first: setupType === 'other' ? ownerFirst : null,
       p_owner_last: setupType === 'other' ? ownerLast : null,
-      p_owner_relationship: setupType === 'other' ? ownerRelationship : null,
+      p_owner_relationship: null,
     })
 
     if (rpcError) {
       setError(rpcError.message || 'Something went wrong. Please try again.')
       setLoading(false)
       return
+    }
+
+    // Stamp the structured relationship_kind on the acting user's
+    // membership in the new circle. Migration 038's backfill sets
+    // 'self' for home_owner / circle_manager rows on EXISTING circles;
+    // new rows from setup_home_circle won't have it until we set it
+    // here. Path A users are self, Path B users picked their relation
+    // to the homeowner on the prior step.
+    if (circleId) {
+      const kind = setupType === 'other' ? relationshipKind : 'self'
+      try {
+        await supabase
+          .from('circle_memberships')
+          .update({ relationship_kind: kind })
+          .eq('circle_id', circleId)
+          .eq('person_id', person.id)
+          .eq('status', 'active')
+      } catch {
+        /* best-effort — non-fatal */
+      }
     }
 
     // Best-effort: persist seed extras + the classification answers from
@@ -455,25 +482,26 @@ export default function Onboarding() {
             </label>
           </div>
 
-          <label className="form-label">
-            Your relationship to them
-            <select value={ownerRelationship} onChange={(e) => setOwnerRelationship(e.target.value)} className="form-input" required>
-              <option value="">Select...</option>
-              <option value="daughter">Daughter</option>
-              <option value="son">Son</option>
-              <option value="spouse">Spouse</option>
-              <option value="grandchild">Grandchild</option>
-              <option value="niece_nephew">Niece/Nephew</option>
-              <option value="friend">Friend</option>
-              <option value="professional">Professional caregiver</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
+          <p className="form-label" style={{ marginTop: '1rem' }}>
+            What's your relationship to {ownerFirst || 'them'}?
+          </p>
+          <div className="relationship-picker">
+            {RELATIONSHIP_OPTIONS.filter((opt) => opt.value !== 'self').map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`relationship-pick ${relationshipKind === opt.value ? 'on' : ''}`}
+                onClick={() => setRelationshipKind(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
           <button
             className="btn-primary-full"
             onClick={() => setStep('home')}
-            disabled={!ownerFirst || !ownerLast || !ownerRelationship}
+            disabled={!ownerFirst || !ownerLast || !relationshipKind}
           >
             Continue to Home Profile
           </button>

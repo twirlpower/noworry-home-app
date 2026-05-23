@@ -5,6 +5,7 @@ import { useCircle } from '../context/CircleContext'
 import { useStaffRole } from '../hooks/useStaffRole'
 import { useHomeTechRole } from '../hooks/useHomeTechRole'
 import { useViewMode } from '../context/ViewModeContext'
+import { getHomeDisplayName } from '../utils/homeDisplayName'
 
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
 const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
@@ -112,7 +113,11 @@ export default function AppShell() {
             >
               {circles.map((c) => (
                 <option key={c.family_circles.id} value={c.family_circles.id}>
-                  {c.family_circles.name}
+                  {getHomeDisplayName(
+                    c.relationship_kind,
+                    c.homeowners,
+                    c.family_circles.name
+                  )}
                 </option>
               ))}
             </select>

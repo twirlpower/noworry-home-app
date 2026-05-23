@@ -33,11 +33,46 @@ export function CircleProvider({ children }) {
       .eq('status', 'active')
 
     const memberCircles = data || []
-    setCircles(memberCircles)
 
-    if (memberCircles.length > 0 && !activeCircle) {
-      setActiveCircle(memberCircles[0].family_circles)
-      setMembership(memberCircles[0])
+    // Fetch homeowners per circle (separate query because the inverse
+    // join — circle_memberships → persons via role filter — isn't
+    // expressible from the per-user membership query above). One round
+    // trip total; cheap.
+    let homeownersByCircle = {}
+    const circleIds = memberCircles
+      .map((c) => c.family_circles?.id)
+      .filter(Boolean)
+    if (circleIds.length > 0) {
+      const { data: owners } = await supabase
+        .from('circle_memberships')
+        .select('circle_id, role, persons!person_id (first_name, gender)')
+        .in('circle_id', circleIds)
+        .in('role', ['home_owner', 'circle_manager'])
+        .eq('status', 'active')
+      homeownersByCircle = (owners ?? []).reduce((acc, row) => {
+        if (!row.persons) return acc
+        const list = acc[row.circle_id] || []
+        // Avoid duplicates if the same person holds both home_owner and
+        // circle_manager roles (rare but possible).
+        if (!list.some((p) => p.first_name === row.persons.first_name && p.gender === row.persons.gender)) {
+          list.push(row.persons)
+        }
+        acc[row.circle_id] = list
+        return acc
+      }, {})
+    }
+
+    // Decorate each membership with homeowners[] for downstream consumers
+    // (AppShell switcher, anywhere that wants getHomeDisplayName).
+    const enriched = memberCircles.map((c) => ({
+      ...c,
+      homeowners: homeownersByCircle[c.family_circles?.id] || [],
+    }))
+    setCircles(enriched)
+
+    if (enriched.length > 0 && !activeCircle) {
+      setActiveCircle(enriched[0].family_circles)
+      setMembership(enriched[0])
     }
 
     setLoading(false)

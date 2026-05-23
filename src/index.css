@@ -3987,3 +3987,32 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   font-weight: 600;
   color: var(--text);
 }
+
+/* ── Onboarding Path B — relationship picker ────────────────────────────── */
+.relationship-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.4rem 0 1.2rem;
+}
+.relationship-pick {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  background: var(--white);
+  color: var(--text);
+  border: 2px solid var(--cool);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.relationship-pick.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
