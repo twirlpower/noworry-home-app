@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useStaffRole } from '../../hooks/useStaffRole'
-import { useViewMode } from '../../context/ViewModeContext'
+import { useStaffMode } from '../../context/StaffModeContext'
 import { useSyncStatus } from '../../lib/techSync'
 
 // Mobile-first layout wrapper for all /tech/* pages. Fixed header + sync
@@ -17,12 +17,12 @@ const NAV_ITEMS = [
 
 export default function TechShell() {
   const { isStaff } = useStaffRole()
-  const { setViewMode } = useViewMode()
+  const { setStaffMode } = useStaffMode()
   const { pendingCount, isOnline } = useSyncStatus()
   const navigate = useNavigate()
 
   function switchToAdmin() {
-    setViewMode('admin')
+    setStaffMode('admin')
     navigate('/admin/crm')
   }
 

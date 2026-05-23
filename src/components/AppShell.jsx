@@ -4,7 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { useStaffRole } from '../hooks/useStaffRole'
 import { useHomeTechRole } from '../hooks/useHomeTechRole'
-import { useViewMode } from '../context/ViewModeContext'
+import { useStaffMode } from '../context/StaffModeContext'
+import { useView } from '../context/ViewContext'
+import { VIEW_LABELS, VIEW_DESCRIPTIONS, VIEW_DEFAULT_PATH } from '../utils/availableViews'
+
+const VIEW_TIP_KEY = 'noworry:viewSwitcherSeen'
 import { getHomeDisplayName } from '../utils/homeDisplayName'
 
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
@@ -15,10 +19,15 @@ export default function AppShell() {
   const { circles, activeCircle, switchCircle } = useCircle()
   const { isStaff, isOwner, loading: staffLoading } = useStaffRole()
   const { isHomeTech } = useHomeTechRole()
-  // Aliased — AppShell already has a local setViewMode for the staff
-  // "View as Member" toggle. ViewModeContext's setViewMode controls the
-  // dual-role admin/tech switch, which is a separate state machine.
-  const { setViewMode: setAppViewMode } = useViewMode()
+  // StaffModeContext drives the orthogonal admin↔tech shell toggle.
+  const { setStaffMode } = useStaffMode()
+  // ViewContext drives the perspective layer for the main shell
+  // (homeowner / family / admin). Switcher renders only when 2+ views
+  // are available for the current circle.
+  const { activeView, views, switchView } = useView()
+  const [viewTipDismissed, setViewTipDismissed] = useState(() => {
+    try { return localStorage.getItem(VIEW_TIP_KEY) === '1' } catch { return true }
+  })
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -48,16 +57,20 @@ export default function AppShell() {
   // Defense-in-depth: even though RootRedirect routes staff to /admin/crm,
   // a staff member could still reach a member page via a bookmark, browser
   // back, or pasted URL. Bounce them back to admin. Wait on staffLoading
-  // so we don't redirect during the initial Supabase lookup. Skip entirely
-  // when the staff user has opted into member view.
+  // so we don't redirect during the initial Supabase lookup. Skip when:
+  //   - the staff user has opted into the legacy member view, OR
+  //   - the ViewContext perspective is family or homeowner (Phase 3 —
+  //     dual-role staff users with a circle membership can opt into
+  //     the family/homeowner surface from the new view switcher).
   useEffect(() => {
     if (staffLoading) return
     if (!isStaff) return
     if (viewMode === 'member') return
+    if (activeView === 'family' || activeView === 'homeowner') return
     if (!location.pathname.startsWith('/admin')) {
       navigate('/admin/crm', { replace: true })
     }
-  }, [isStaff, staffLoading, viewMode, location.pathname, navigate])
+  }, [isStaff, staffLoading, viewMode, activeView, location.pathname, navigate])
 
   // localStorage read is synchronous and cheap; lazy init keeps it out of an effect.
   const [adminOpen, setAdminOpen] = useState(() => {
@@ -121,6 +134,43 @@ export default function AppShell() {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {views.length > 1 && (
+          <div className="view-switcher" aria-label="Switch view">
+            <p className="view-switcher-label">View</p>
+            {views.map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`view-switcher-pill ${activeView === v ? 'on' : ''}`}
+                onClick={() => {
+                  switchView(v)
+                  const path = VIEW_DEFAULT_PATH[v] || '/dashboard'
+                  navigate(path)
+                }}
+                aria-pressed={activeView === v}
+              >
+                <span className="view-switcher-title">{VIEW_LABELS[v]}</span>
+                <span className="view-switcher-desc">{VIEW_DESCRIPTIONS[v]}</span>
+              </button>
+            ))}
+            {!viewTipDismissed && (
+              <div className="view-switcher-tip" role="status">
+                <strong>New:</strong> Switch between your views here.
+                <button
+                  type="button"
+                  className="view-switcher-tip-dismiss"
+                  onClick={() => {
+                    setViewTipDismissed(true)
+                    try { localStorage.setItem(VIEW_TIP_KEY, '1') } catch { /* ignore */ }
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -226,7 +276,7 @@ export default function AppShell() {
             type="button"
             className="switch-to-field-link"
             onClick={() => {
-              setAppViewMode('tech')
+              setStaffMode('tech')
               navigate('/tech/homes')
             }}
           >

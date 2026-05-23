@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CircleProvider } from './context/CircleContext'
-import { ViewModeProvider } from './context/ViewModeContext'
+import { StaffModeProvider } from './context/StaffModeContext'
+import { ViewProvider } from './context/ViewContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import HomeTechRoute from './components/HomeTechRoute'
 import AppShell from './components/AppShell'
@@ -32,6 +33,7 @@ import AdminMaintenance from './pages/admin/AdminMaintenance'
 import AdminReports from './pages/admin/AdminReports'
 import AdminFinance from './pages/admin/AdminFinance'
 import AdminMemberList from './pages/admin/AdminMemberList'
+import HomeownerDashboard from './pages/homeowner/Dashboard'
 import { useStaffRole } from './hooks/useStaffRole'
 import { useCircle } from './context/CircleContext'
 
@@ -69,7 +71,8 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CircleProvider>
-          <ViewModeProvider>
+          <ViewProvider>
+          <StaffModeProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -88,6 +91,7 @@ export default function App() {
             }>
               <Route index element={<RootRedirect />} />
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="home" element={<HomeownerDashboard />} />
               <Route path="home-profile" element={<HomeProfile />} />
               <Route path="maintenance" element={<Maintenance />} />
               <Route path="safety" element={<Safety />} />
@@ -147,7 +151,8 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-          </ViewModeProvider>
+          </StaffModeProvider>
+          </ViewProvider>
         </CircleProvider>
       </AuthProvider>
     </BrowserRouter>

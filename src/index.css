@@ -4088,3 +4088,184 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   border-color: var(--teal);
   color: var(--deep);
 }
+
+/* ── Phase 3a — View switcher (AppShell) ────────────────────────────────── */
+.view-switcher {
+  padding: 0.6rem 0.8rem;
+  margin: 0 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--cool);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.view-switcher-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+.view-switcher-pill {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  background: var(--white);
+  color: var(--text);
+  border: 1.5px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.view-switcher-pill.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+.view-switcher-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.view-switcher-desc {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+.view-switcher-pill.on .view-switcher-desc {
+  color: var(--deep);
+}
+.view-switcher-tip {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  background: #FBF3E3;
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--amber-text);
+}
+.view-switcher-tip-dismiss {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--deep);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+/* ── Phase 3a — HomeownerDashboard ──────────────────────────────────────── */
+.homeowner-page {
+  padding: 2rem;
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 18px;
+}
+.homeowner-h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.5rem;
+}
+.homeowner-h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.4rem;
+}
+.homeowner-sub {
+  font-size: 18px;
+  color: var(--text);
+  margin-bottom: 2rem;
+  line-height: 1.55;
+}
+.homeowner-eyebrow {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.homeowner-hero {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: 16px;
+  padding: 2.4rem 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.homeowner-hero-good { border-color: var(--muted-teal); background: #E1F5EE; }
+.homeowner-hero-fair { border-color: #F0D699; background: #FBF3E3; }
+.homeowner-hero-poor { border-color: #F4C8B5; background: #FDE3DA; }
+
+.homeowner-hero-label {
+  font-size: 16px;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+.homeowner-hero-score {
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--deep);
+  line-height: 1;
+}
+.homeowner-hero-phrase {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 0.9rem;
+}
+
+.homeowner-coming-up {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: 14px;
+  padding: 1.6rem 1.8rem;
+  margin-bottom: 2rem;
+}
+.homeowner-coming-when {
+  font-size: 17px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-top: 0.3rem;
+}
+.homeowner-coming-helper {
+  font-size: 16px;
+  color: var(--muted);
+  margin-top: 0.8rem;
+  font-style: italic;
+}
+
+.homeowner-actions {
+  display: flex;
+  justify-content: center;
+  margin: 1.2rem 0 2rem;
+}
+.homeowner-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 1.6rem;
+  background: var(--teal);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.homeowner-cta:hover { background: var(--dark-teal); }
+
+.homeowner-helper-note {
+  text-align: center;
+  font-size: 16px;
+  color: var(--muted);
+  margin-top: 2rem;
+  font-style: italic;
+}

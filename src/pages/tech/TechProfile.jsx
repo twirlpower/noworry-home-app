@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useHomeTechRole } from '../../hooks/useHomeTechRole'
 import { useStaffRole } from '../../hooks/useStaffRole'
-import { useViewMode } from '../../context/ViewModeContext'
+import { useStaffMode } from '../../context/StaffModeContext'
 
 const BG_PILL = {
   pending: { tone: 'amber', label: 'Pending' },
@@ -29,7 +29,7 @@ export default function TechProfile() {
   const { signOut } = useAuth()
   const { homeTechData, loading } = useHomeTechRole()
   const { isStaff } = useStaffRole()
-  const { setViewMode } = useViewMode()
+  const { setStaffMode } = useStaffMode()
   const navigate = useNavigate()
 
   if (loading) {
@@ -46,7 +46,7 @@ export default function TechProfile() {
   }
 
   async function switchToAdmin() {
-    setViewMode('admin')
+    setStaffMode('admin')
     navigate('/admin/crm')
   }
 
