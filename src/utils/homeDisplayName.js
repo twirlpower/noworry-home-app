@@ -85,3 +85,22 @@ export const RELATIONSHIP_OPTIONS = [
   { value: 'professional',   label: "I'm a professional caregiver" },
   { value: 'other',          label: 'Other' },
 ]
+
+// Dashboard / page-header greeting variant. Self + spouse get the warm
+// "Welcome home" personal-pronoun form; everyone else gets
+// "Welcome to {label}" using the same display-name logic.
+export function getHomeGreeting(relationship, homeowners = [], circleName = 'Home') {
+  if (relationship === 'self' || relationship === 'spouse_partner') {
+    return 'Welcome home'
+  }
+  const label = getHomeDisplayName(relationship, homeowners, circleName)
+  return `Welcome to ${label}`
+}
+
+// Display labels for the Settings pronoun selector.
+export const GENDER_OPTIONS = [
+  { value: 'she_her',           label: 'She / her' },
+  { value: 'he_him',            label: 'He / him' },
+  { value: 'they_them',         label: 'They / them' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+]

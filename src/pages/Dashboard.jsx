@@ -8,6 +8,7 @@ import { SAFETY_ITEMS } from '../lib/safetyItems'
 import { CRITICAL_TYPE_KEYS } from '../lib/documents'
 import { evaluate as evaluatePrompt } from '../lib/promptEngine'
 import HealthScore from '../components/HealthScore'
+import { getHomeGreeting } from '../utils/homeDisplayName'
 import PreparedReveal from '../components/PreparedReveal'
 import PromptCard from '../components/PromptCard'
 import PaymentModal from '../components/PaymentModal'
@@ -86,7 +87,7 @@ function formatDue(dateStr) {
 
 export default function Dashboard() {
   const { person } = useAuth()
-  const { activeCircle, membership, applyCircleUpdate } = useCircle()
+  const { activeCircle, membership, circles, applyCircleUpdate } = useCircle()
   const personId = person?.id
 
   const [loading, setLoading] = useState(true)
@@ -392,7 +393,19 @@ export default function Dashboard() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1>{activeCircle.name}</h1>
+        <h1>
+          {(() => {
+            // Active membership has relationship_kind; the matching row in
+            // circles[] carries the homeowners[] decoration from
+            // CircleContext.loadCircles. Cross-reference by circle id.
+            const row = circles.find((c) => c.family_circles?.id === activeCircle.id)
+            return getHomeGreeting(
+              membership?.relationship_kind,
+              row?.homeowners ?? [],
+              activeCircle.name
+            )
+          })()}
+        </h1>
         <span className="role-badge">
           {ROLE_LABELS[membership?.role] ?? membership?.role}
         </span>

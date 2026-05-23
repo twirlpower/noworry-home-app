@@ -4016,3 +4016,75 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   border-color: var(--teal);
   color: var(--deep);
 }
+
+/* ── Settings — About You (identity) card ───────────────────────────────── */
+.identity-pronoun-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0.4rem;
+}
+.identity-pronoun-pill {
+  min-height: 48px;
+  padding: 0.7rem 1.1rem;
+  background: var(--white);
+  color: var(--text);
+  border: 2px solid var(--cool);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.identity-pronoun-pill.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}
+.identity-dob-input {
+  max-width: 280px;
+  display: block;
+  margin-top: 0.4rem;
+}
+.identity-save-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+.identity-saved-flash {
+  color: var(--deep);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* ── Circle.jsx — homeowner pronoun chips on member row ─────────────────── */
+.member-pronoun-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+.member-pronoun-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.member-pronoun-chip {
+  min-height: 32px;
+  padding: 0.3rem 0.7rem;
+  background: var(--off-white);
+  color: var(--text);
+  border: 1px solid var(--cool);
+  border-radius: 999px;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.member-pronoun-chip.on {
+  background: #DDF3E9;
+  border-color: var(--teal);
+  color: var(--deep);
+}

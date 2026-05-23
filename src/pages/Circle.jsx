@@ -3,6 +3,11 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { ROLE_LABELS } from '../lib/circleRoles'
+import { RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '../utils/homeDisplayName'
+
+// Roles allowed to edit a homeowner's pronouns. Circle managers and the
+// home owner themselves can change it; everyone else just reads.
+const PRONOUN_EDIT_ROLES = new Set(['home_owner', 'circle_manager'])
 import RoleSelect from '../components/RoleSelect'
 
 // Family pillar = Full → can manage members (Family Graph matrix).
@@ -26,6 +31,11 @@ export default function Circle() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('family_member')
   const [relationship, setRelationship] = useState('')
+  // Structured relationship for personalized display names (Phase 2).
+  // Kept alongside the freeform `relationship` field — the legacy text
+  // continues to drive the inline label ("· daughter") while the enum
+  // feeds getHomeDisplayName everywhere else.
+  const [relationshipKind, setRelationshipKind] = useState('other')
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState('')
 
@@ -34,7 +44,7 @@ export default function Circle() {
     let cancelled = false
     supabase
       .from('circle_memberships')
-      .select('id, role, status, relationship, persons!person_id (first_name, last_name, email, auth_status)')
+      .select('id, role, status, relationship, person_id, persons!person_id (id, first_name, last_name, email, auth_status, gender)')
       .eq('circle_id', activeCircle.id)
       .order('created_at', { ascending: true })
       .then(({ data, error: e }) => {
@@ -48,10 +58,22 @@ export default function Circle() {
     }
   }, [activeCircle])
 
+  // Update a homeowner's pronouns. Visible only to circle_manager /
+  // home_owner viewers (see PRONOUN_EDIT_ROLES). Best-effort — reload
+  // members on success so the chip selection reflects immediately.
+  async function updateHomeownerGender(personId, newGender) {
+    if (!personId) return
+    const { error: gErr } = await supabase
+      .from('persons')
+      .update({ gender: newGender })
+      .eq('id', personId)
+    if (!gErr) await reloadMembers()
+  }
+
   async function reloadMembers() {
     const { data } = await supabase
       .from('circle_memberships')
-      .select('id, role, status, relationship, persons!person_id (first_name, last_name, email, auth_status)')
+      .select('id, role, status, relationship, person_id, persons!person_id (id, first_name, last_name, email, auth_status, gender)')
       .eq('circle_id', activeCircle.id)
       .order('created_at', { ascending: true })
     setMembers(data ?? [])
@@ -59,7 +81,8 @@ export default function Circle() {
 
   function openInvite() {
     setFirst(''); setLast(''); setEmail(''); setRole('family_member')
-    setRelationship(''); setError(''); setNotice(''); setShowInvite(true)
+    setRelationship(''); setRelationshipKind('other')
+    setError(''); setNotice(''); setShowInvite(true)
   }
 
   async function handleInvite(e) {
@@ -95,6 +118,7 @@ export default function Circle() {
       role,
       status: 'invited',
       relationship: relationship || null,
+      relationship_kind: relationshipKind,
       invited_by: person.id,
     })
 
@@ -165,8 +189,25 @@ export default function Circle() {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="form-input" placeholder="them@example.com" />
           </label>
           <RoleSelect name="invite-role" value={role} onChange={setRole} />
+
+          <p className="form-label" style={{ marginTop: '0.6rem' }}>
+            Their relationship to the homeowner
+          </p>
+          <div className="relationship-picker">
+            {RELATIONSHIP_OPTIONS.filter((opt) => opt.value !== 'self').map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`relationship-pick ${relationshipKind === opt.value ? 'on' : ''}`}
+                onClick={() => setRelationshipKind(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <label className="form-label">
-            Relationship (optional)
+            Relationship label (optional)
             <input type="text" value={relationship} onChange={(e) => setRelationship(e.target.value)} className="form-input" placeholder="daughter, neighbor…" />
           </label>
           <button type="submit" className="btn-primary-full" disabled={saving}>
@@ -181,20 +222,38 @@ export default function Circle() {
       <div className="profile-card">
         <h3>Members</h3>
         <ul className="member-list">
-          {members.map((m) => (
-            <li key={m.id} className="member-row">
-              <div className="member-main">
-                <span className="member-name">
-                  {m.persons?.first_name} {m.persons?.last_name}
-                </span>
-                <span className="member-meta">
-                  {ROLE_LABELS[m.role] ?? m.role}
-                  {m.relationship ? ` · ${m.relationship}` : ''}
-                </span>
-              </div>
-              <span className={`member-status status-${m.status}`}>{m.status}</span>
-            </li>
-          ))}
+          {members.map((m) => {
+            const canEditPronouns = m.role === 'home_owner' && PRONOUN_EDIT_ROLES.has(membership?.role)
+            return (
+              <li key={m.id} className="member-row">
+                <div className="member-main">
+                  <span className="member-name">
+                    {m.persons?.first_name} {m.persons?.last_name}
+                  </span>
+                  <span className="member-meta">
+                    {ROLE_LABELS[m.role] ?? m.role}
+                    {m.relationship ? ` · ${m.relationship}` : ''}
+                  </span>
+                  {canEditPronouns && (
+                    <div className="member-pronoun-row">
+                      <span className="member-pronoun-label">Pronouns:</span>
+                      {GENDER_OPTIONS.slice(0, 3).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`member-pronoun-chip ${m.persons?.gender === opt.value ? 'on' : ''}`}
+                          onClick={() => updateHomeownerGender(m.person_id, opt.value)}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span className={`member-status status-${m.status}`}>{m.status}</span>
+              </li>
+            )
+          })}
         </ul>
       </div>
     </div>

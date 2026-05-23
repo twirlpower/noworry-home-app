@@ -6,6 +6,7 @@ import { useCircle } from '../context/CircleContext'
 import { tierLabel } from '../lib/tiers'
 import PaymentModal from '../components/PaymentModal'
 import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
+import { GENDER_OPTIONS } from '../utils/homeDisplayName'
 
 const MS_PER_DAY = 86400000
 
@@ -90,6 +91,38 @@ export default function Settings() {
   const { person, refreshPerson } = useAuth()
   const { activeCircle, membership, applyCircleUpdate } = useCircle()
   const canRename = RENAME_ROLES.includes(membership?.role)
+
+  // ── About You (identity) ──────────────────────────────────────────────────
+  // Pronouns drive the personalized home-display name; DOB is collected
+  // now for future cohort analytics. Both are optional.
+  const [identity, setIdentity] = useState({
+    gender: person?.gender ?? '',
+    date_of_birth: person?.date_of_birth ?? '',
+  })
+  const [identitySaving, setIdentitySaving] = useState(false)
+  const [identitySaved, setIdentitySaved] = useState(false)
+
+  async function saveIdentity() {
+    if (!person?.id || identitySaving) return
+    setIdentitySaving(true)
+    setIdentitySaved(false)
+    const patch = {
+      gender: identity.gender || null,
+      date_of_birth: identity.date_of_birth || null,
+    }
+    const { error: idErr } = await supabase
+      .from('persons')
+      .update(patch)
+      .eq('id', person.id)
+    setIdentitySaving(false)
+    if (!idErr) {
+      setIdentitySaved(true)
+      // refreshPerson updates the AuthContext cache so other surfaces
+      // (Dashboard greeting, switcher) reflect the new pronouns.
+      refreshPerson?.()
+      setTimeout(() => setIdentitySaved(false), 3000)
+    }
+  }
 
   // ── My Profile ────────────────────────────────────────────────────────────
   const [pForm, setPForm] = useState(() => profileToForm(person))
@@ -269,6 +302,54 @@ export default function Settings() {
     <div className="page">
       <div className="page-header">
         <h1>Settings</h1>
+      </div>
+
+      {/* About You — identity (pronouns + DOB) */}
+      <div className="profile-card identity-card">
+        <h3>About you</h3>
+        <p className="page-placeholder" style={{ marginTop: 0 }}>
+          Help your family circle feel more personal. This information stays
+          with your account and is only used to make the app feel like yours.
+        </p>
+
+        <p className="form-label" style={{ marginTop: '1rem' }}>Pronouns</p>
+        <div className="identity-pronoun-row">
+          {GENDER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`identity-pronoun-pill ${identity.gender === opt.value ? 'on' : ''}`}
+              onClick={() => setIdentity((p) => ({ ...p, gender: opt.value }))}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <label className="form-label" style={{ marginTop: '1rem', display: 'block' }}>
+          Date of birth <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(optional)</span>
+          <input
+            type="date"
+            className="form-input identity-dob-input"
+            value={identity.date_of_birth || ''}
+            onChange={(e) => setIdentity((p) => ({ ...p, date_of_birth: e.target.value }))}
+          />
+        </label>
+
+        <div className="identity-save-row">
+          <button
+            type="button"
+            className="btn-primary-full"
+            style={{ maxWidth: '220px' }}
+            disabled={identitySaving}
+            onClick={saveIdentity}
+          >
+            {identitySaving ? 'Saving…' : 'Save'}
+          </button>
+          {identitySaved && (
+            <span className="identity-saved-flash" role="status">Saved ✓</span>
+          )}
+        </div>
       </div>
 
       {/* My Profile */}
