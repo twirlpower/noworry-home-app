@@ -295,8 +295,8 @@ function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
     let cancelled = false
     async function load() {
       const [docsRes, ecRes, grantsRes] = await Promise.all([
-        supabase.from('documents').select('id, label, type, is_archived').eq('circle_id', circleId),
-        supabase.from('emergency_contacts').select('id, label, name').eq('circle_id', circleId),
+        supabase.from('documents').select('id, title, document_type, is_archived').eq('circle_id', circleId),
+        supabase.from('emergency_contacts').select('id, name, relationship').eq('circle_id', circleId),
         supabase.from('advisor_grants')
           .select('resource_type, resource_id')
           .eq('circle_id', circleId)
@@ -395,7 +395,7 @@ function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
                   disabled={busy}
                   onChange={() => toggleGrant('document', doc.id, granted)}
                 />
-                <span>{doc.label || doc.type || '(untitled)'}</span>
+                <span>{doc.title || doc.document_type || '(untitled)'}</span>
               </label>
             )
           })}
@@ -415,7 +415,7 @@ function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
                   disabled={busy}
                   onChange={() => toggleGrant('emergency_contact', c.id, granted)}
                 />
-                <span>{c.label || c.name || '(unnamed)'}</span>
+                <span>{c.name || '(unnamed)'}{c.relationship ? ` — ${c.relationship}` : ''}</span>
               </label>
             )
           })}
