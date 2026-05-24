@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import CRMLeadsTab from '../../components/admin/CRMLeadsTab'
+import CRMProspectsTab from '../../components/admin/CRMProspectsTab'
 import CRMCustomersTab from '../../components/admin/CRMCustomersTab'
 import CRMPartnersTab from '../../components/admin/CRMPartnersTab'
 import CRMVendorsTab from '../../components/admin/CRMVendorsTab'
 
 const TABS = [
   ['leads',     'Leads'],
+  ['prospects', 'Prospects'],
   ['customers', 'Customers'],
   ['partners',  'Partners'],
   ['vendors',   'Vendors'],
@@ -94,6 +96,7 @@ export default function AdminCRM() {
 
       <div className="admin-tab-body">
         {tab === 'leads'     && <CRMLeadsTab     onChange={bumpStats} />}
+        {tab === 'prospects' && <CRMProspectsTab onChange={bumpStats} />}
         {tab === 'customers' && <CRMCustomersTab onChange={bumpStats} />}
         {tab === 'partners'  && <CRMPartnersTab  onChange={bumpStats} />}
         {tab === 'vendors'   && <CRMVendorsTab   onChange={bumpStats} />}

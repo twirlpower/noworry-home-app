@@ -1,176 +1,200 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-// Pipeline statuses per the locked spec. crm_contacts.status now drives
-// the pill; the legacy `tier` column stays in the DB but is hidden in
-// this UI (it conflicted conceptually with family_circles.subscription_tier
-// for real customers).
+// New "Leads" tab: marketing-site form captures. Backed by the `leads`
+// table (migration 042) — distinct from the hand-entered Prospects tab
+// (crm_contacts). Triage flow: incoming lead → contacted → qualified →
+// converted (into a typed CRM row) OR declined / spam.
+
+const LEAD_TYPES = [
+  ['homeowner_signup',   'Homeowner Signup'],
+  ['vendor_application', 'Vendor Application'],
+  ['partner_inquiry',    'Partner Inquiry'],
+  ['general_contact',    'General Contact'],
+]
+const LEAD_TYPE_LABEL = Object.fromEntries(LEAD_TYPES)
+const LEAD_TYPE_PILL_COLOR = {
+  homeowner_signup:   'green',
+  vendor_application: 'blue',
+  partner_inquiry:    'amber',
+  general_contact:    'gray',
+}
+
 const STATUSES = [
-  ['lead',      'Lead'],
+  ['new',       'New'],
   ['contacted', 'Contacted'],
   ['qualified', 'Qualified'],
   ['converted', 'Converted'],
-  ['inactive',  'Inactive'],
+  ['declined',  'Declined'],
+  ['spam',      'Spam'],
 ]
 const STATUS_LABEL = Object.fromEntries(STATUSES)
 const STATUS_PILL_COLOR = {
-  lead:      'gray',
-  contacted: 'blue',
+  new:       'blue',
+  contacted: 'gray',
   qualified: 'green',
-  converted: 'amber',
-  inactive:  'light',
+  converted: 'dark-green',
+  declined:  'light',
+  spam:      'dark-red',
 }
 
-const SOURCES = [
-  ['personal_network', 'Personal Network'],
-  ['referral_partner', 'Referral Partner'],
-  ['cold',             'Cold'],
-  ['other',            'Other'],
-]
-
-const EMPTY_FORM = {
-  name: '',
-  phone: '',
-  email: '',
-  source: 'personal_network',
-  status: 'lead',
-  notes: '',
-  next_action: '',
-}
-
-function fmtDate(s) {
+function fmtDateTime(s) {
   if (!s) return '—'
-  return new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })
+  return new Date(s).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', year: '2-digit',
+    hour: 'numeric', minute: '2-digit',
+  })
 }
 
-function contactToForm(c) {
-  return {
-    name:        c.name ?? '',
-    phone:       c.phone ?? '',
-    email:       c.email ?? '',
-    source:      c.source ?? 'personal_network',
-    status:      c.status ?? 'lead',
-    notes:       c.notes ?? '',
-    next_action: c.next_action ?? '',
-  }
+// Map a converted-to target to a human label for the audit line.
+const CONVERTED_TO_LABEL = {
+  vendor:      'Vendor',
+  crm_partner: 'Partner',
+  crm_contact: 'Prospect',
 }
 
 export default function CRMLeadsTab({ onChange }) {
-  const [contacts, setContacts] = useState([])
+  const [leads, setLeads] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
-  const [panelMode, setPanelMode] = useState(null) // null | 'new' | <uuid>
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('active')
+  const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState(null)
-
-  // Convert flow state.
-  const [convertingId, setConvertingId] = useState(null)
-  const [convertSearch, setConvertSearch] = useState('')
-  const [convertResults, setConvertResults] = useState([])
-  const [convertLoading, setConvertLoading] = useState(false)
-  const [convertError, setConvertError] = useState('')
+  const [busyId, setBusyId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
-    supabase
-      .from('crm_contacts')
-      .select('*')
-      .order('date_added', { ascending: false })
-      .then(({ data, error: e }) => {
-        if (cancelled) return
-        if (e) setError(e.message)
-        else setContacts(data ?? [])
-        setLoaded(true)
-      })
+    async function load() {
+      let query = supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      if (typeFilter !== 'all') query = query.eq('lead_type', typeFilter)
+      if (statusFilter === 'active') query = query.in('status', ['new', 'contacted'])
+      else if (statusFilter !== 'all') query = query.eq('status', statusFilter)
+
+      const { data, error: e } = await query
+      if (cancelled) return
+      if (e) setError(e.message)
+      else { setLeads(data ?? []); setError('') }
+      setLoaded(true)
+    }
+    load()
     return () => { cancelled = true }
-  }, [])
+  }, [typeFilter, statusFilter])
+
+  // Client-side search by name or email — keeps the query simple and lets
+  // staff filter the loaded page without round-tripping. If the lead
+  // volume gets high (hundreds per day) move this server-side.
+  const visibleLeads = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return leads
+    return leads.filter((l) => {
+      const hay = `${l.name ?? ''} ${l.email ?? ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [leads, search])
 
   async function reload() {
-    const { data, error: e } = await supabase
-      .from('crm_contacts')
+    let query = supabase
+      .from('leads')
       .select('*')
-      .order('date_added', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (typeFilter !== 'all') query = query.eq('lead_type', typeFilter)
+    if (statusFilter === 'active') query = query.in('status', ['new', 'contacted'])
+    else if (statusFilter !== 'all') query = query.eq('status', statusFilter)
+    const { data, error: e } = await query
     if (e) setError(e.message)
-    else { setContacts(data ?? []); onChange?.() }
+    else { setLeads(data ?? []); setError(''); onChange?.() }
   }
 
-  function setField(k, v) { setForm((f) => ({ ...f, [k]: v })) }
-
-  function openAdd() {
-    setForm(EMPTY_FORM); setError(''); setPanelMode('new')
-  }
-  function openEdit(c) {
-    setForm(contactToForm(c)); setError(''); setPanelMode(c.id)
-  }
-  function closePanel() { setPanelMode(null); setError('') }
-
-  async function handleSave(e) {
-    e.preventDefault()
-    setSaving(true); setError('')
-
-    const payload = {
-      name:        form.name.trim(),
-      phone:       form.phone.trim() || null,
-      email:       form.email.trim() || null,
-      source:      form.source || null,
-      status:      form.status,
-      notes:       form.notes.trim() || null,
-      next_action: form.next_action.trim() || null,
+  async function updateStatus(lead, nextStatus) {
+    if (busyId) return
+    setBusyId(lead.id); setError('')
+    const update = { status: nextStatus }
+    if (nextStatus === 'contacted' && !lead.contacted_at) {
+      update.contacted_at = new Date().toISOString()
     }
+    const { error: e } = await supabase
+      .from('leads')
+      .update(update)
+      .eq('id', lead.id)
+    setBusyId(null)
+    if (e) { setError(e.message); return }
+    await reload()
+  }
 
-    let res
-    if (panelMode === 'new') {
-      res = await supabase.from('crm_contacts').insert(payload).select().single()
-      if (!res.error && res.data) {
-        setContacts((prev) => [res.data, ...prev])
-        onChange?.()
+  async function markSpam(lead) {
+    if (busyId) return
+    if (!confirm(`Mark "${lead.name || lead.email || 'this lead'}" as spam?`)) return
+    await updateStatus(lead, 'spam')
+  }
+
+  // Convert flow: create a row in the target CRM table for the lead's
+  // type, stamp the lead converted_to / converted_id / converted_at /
+  // status='converted'. Audit-only — staff still has to edit the target
+  // row to fill in anything beyond the form fields we have.
+  async function convertLead(lead) {
+    if (busyId) return
+    if (!confirm(`Convert this lead into a ${convertTargetLabel(lead.lead_type)} row?`)) return
+    setBusyId(lead.id); setError('')
+
+    const payload = lead.payload || {}
+    let table, row
+
+    if (lead.lead_type === 'vendor_application') {
+      table = 'vendors'
+      row = {
+        name:         payload.company || lead.name || '(unnamed)',
+        trade:        payload.category || 'other',
+        contact_name: lead.name || null,
+        phone:        lead.phone || null,
+        email:        lead.email || null,
+        status:       'prospect',
+        notes:        leadConversionNote(lead),
+      }
+    } else if (lead.lead_type === 'partner_inquiry') {
+      table = 'crm_partners'
+      row = {
+        name:         lead.name || '(unnamed)',
+        organization: payload.organization || null,
+        type:         payload.profession || null,
+        notes:        leadConversionNote(lead),
       }
     } else {
-      res = await supabase.from('crm_contacts').update(payload).eq('id', panelMode)
+      // homeowner_signup + general_contact both land as prospects.
+      table = 'crm_contacts'
+      row = {
+        name:    lead.name || '(unnamed)',
+        phone:   lead.phone || null,
+        email:   lead.email || null,
+        source:  'website',
+        status:  'lead',
+        notes:   leadConversionNote(lead),
+      }
     }
 
-    if (res.error) { setError(res.error.message); setSaving(false); return }
-    setSaving(false); setPanelMode(null)
-    if (panelMode !== 'new') await reload()
-  }
+    const ins = await supabase.from(table).insert(row).select().single()
+    if (ins.error) { setError(ins.error.message); setBusyId(null); return }
 
-  function openConvert(contact) {
-    setConvertingId(contact.id)
-    setConvertSearch(contact.email || '')
-    setConvertResults([])
-    setConvertError('')
-  }
-  function closeConvert() {
-    setConvertingId(null); setConvertSearch(''); setConvertResults([])
-  }
-
-  async function runConvertSearch() {
-    if (!convertSearch.trim()) return
-    setConvertLoading(true); setConvertError('')
-    const { data, error: e } = await supabase.rpc('admin_list_customers')
-    setConvertLoading(false)
-    if (e) { setConvertError(e.message); return }
-    const q = convertSearch.trim().toLowerCase()
-    const matches = (data ?? []).filter((c) =>
-      (c.email ?? '').toLowerCase().includes(q) ||
-      [c.first_name, c.last_name].filter(Boolean).join(' ').toLowerCase().includes(q)
-    )
-    setConvertResults(matches)
-  }
-
-  async function linkAccount(contact, customer) {
-    setConvertError('')
-    const { error: e } = await supabase
-      .from('crm_contacts')
+    const upd = await supabase
+      .from('leads')
       .update({
-        status: 'converted',
-        circle_id: customer.circle_id,
-        converted_at: new Date().toISOString(),
+        status:        'converted',
+        converted_at:  new Date().toISOString(),
+        converted_to:  table === 'vendors' ? 'vendor'
+                     : table === 'crm_partners' ? 'crm_partner'
+                     : 'crm_contact',
+        converted_id:  ins.data.id,
       })
-      .eq('id', contact.id)
-    if (e) { setConvertError(e.message); return }
-    closeConvert()
+      .eq('id', lead.id)
+
+    setBusyId(null)
+    if (upd.error) { setError(upd.error.message); return }
     await reload()
   }
 
@@ -186,173 +210,85 @@ export default function CRMLeadsTab({ onChange }) {
   return (
     <div className="admin-tab">
       <div className="admin-tab-header">
-        <h2>Leads <span className="admin-count">({contacts.length})</span></h2>
-        {panelMode === null && (
-          <button className="btn-secondary" onClick={openAdd}>Add Lead</button>
-        )}
+        <h2>Leads <span className="admin-count">({visibleLeads.length})</span></h2>
+      </div>
+
+      <div className="form-row form-row-3" style={{ marginBottom: '1rem' }}>
+        <label className="form-label">
+          Type
+          <select className="form-input" value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="all">All types</option>
+            {LEAD_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="form-label">
+          Status
+          <select className="form-input" value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="active">Active (new + contacted)</option>
+            <option value="all">All statuses</option>
+            {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+        <label className="form-label">
+          Search
+          <input type="text" className="form-input" placeholder="Name or email"
+                 value={search} onChange={(e) => setSearch(e.target.value)} />
+        </label>
       </div>
 
       {error && <div className="auth-error" role="alert">{error}</div>}
 
-      {panelMode !== null && (
-        <form onSubmit={handleSave} className="admin-panel">
-          <h3 className="form-subhead">
-            {panelMode === 'new' ? 'New lead' : 'Edit lead'}
-          </h3>
-          <label className="form-label">
-            Name
-            <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)}
-                   required className="form-input" />
-          </label>
-          <div className="form-row">
-            <label className="form-label">
-              Phone
-              <input type="text" value={form.phone} onChange={(e) => setField('phone', e.target.value)}
-                     className="form-input" />
-            </label>
-            <label className="form-label">
-              Email
-              <input type="email" value={form.email} onChange={(e) => setField('email', e.target.value)}
-                     className="form-input" />
-            </label>
-          </div>
-          <div className="form-row form-row-3">
-            <label className="form-label">
-              Source
-              <select value={form.source} onChange={(e) => setField('source', e.target.value)}
-                      className="form-input">
-                {SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </label>
-            <label className="form-label">
-              Status
-              <select value={form.status} onChange={(e) => setField('status', e.target.value)}
-                      className="form-input">
-                {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </label>
-            <label className="form-label">
-              Next action
-              <input type="text" value={form.next_action} onChange={(e) => setField('next_action', e.target.value)}
-                     className="form-input" />
-            </label>
-          </div>
-          <label className="form-label">
-            Notes
-            <textarea value={form.notes} onChange={(e) => setField('notes', e.target.value)}
-                      className="form-input" rows={3} />
-          </label>
-          <div className="admin-panel-actions">
-            <button type="submit" className="btn-primary-full" disabled={saving || !form.name.trim()}>
-              {saving ? 'Saving…' : panelMode === 'new' ? 'Add Lead' : 'Save Changes'}
-            </button>
-            <button type="button" className="btn-back" onClick={closePanel} disabled={saving}>Cancel</button>
-          </div>
-        </form>
-      )}
-
-      {contacts.length === 0 ? (
-        <p className="page-placeholder">No leads yet. Add your first.</p>
+      {visibleLeads.length === 0 ? (
+        <p className="page-placeholder">No leads match these filters.</p>
       ) : (
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Name</th><th>Phone / Email</th><th>Source</th>
-                <th>Status</th><th>Added</th><th>Next Action</th>
+                <th>Received</th><th>Type</th><th>Name</th>
+                <th>Contact</th><th>Source</th><th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {contacts.map((c) => {
-                const open = expandedId === c.id
-                const converting = convertingId === c.id
-                const color = STATUS_PILL_COLOR[c.status] ?? 'gray'
+              {visibleLeads.map((l) => {
+                const open = expandedId === l.id
+                const typeColor = LEAD_TYPE_PILL_COLOR[l.lead_type] ?? 'gray'
+                const statusColor = STATUS_PILL_COLOR[l.status] ?? 'gray'
                 return (
-                  <Fragment key={c.id}>
+                  <Fragment key={l.id}>
                     <tr className={open ? 'admin-row-open' : ''}
-                        onClick={() => setExpandedId(open ? null : c.id)}>
-                      <td><strong>{c.name}</strong></td>
-                      <td className="admin-cell-stack">
-                        {c.phone && <span>{c.phone}</span>}
-                        {c.email && <span className="admin-meta">{c.email}</span>}
-                        {!c.phone && !c.email && <span className="admin-meta">—</span>}
+                        onClick={() => setExpandedId(open ? null : l.id)}>
+                      <td>{fmtDateTime(l.created_at)}</td>
+                      <td>
+                        <span className={`admin-pill admin-pill-color-${typeColor}`}>
+                          {LEAD_TYPE_LABEL[l.lead_type] ?? l.lead_type}
+                        </span>
                       </td>
-                      <td>{SOURCES.find(([v]) => v === c.source)?.[1] ?? c.source ?? '—'}</td>
-                      <td><span className={`admin-pill admin-pill-color-${color}`}>{STATUS_LABEL[c.status] ?? c.status}</span></td>
-                      <td>{fmtDate(c.date_added)}</td>
-                      <td className="admin-cell-truncate">{c.next_action || '—'}</td>
+                      <td><strong>{l.name || <em className="admin-meta">—</em>}</strong></td>
+                      <td className="admin-cell-stack">
+                        {l.email && <span>{l.email}</span>}
+                        {l.phone && <span className="admin-meta">{l.phone}</span>}
+                        {!l.email && !l.phone && <span className="admin-meta">—</span>}
+                      </td>
+                      <td className="admin-cell-truncate">{l.source_page || '—'}</td>
+                      <td>
+                        <span className={`admin-pill admin-pill-color-${statusColor}`}>
+                          {STATUS_LABEL[l.status] ?? l.status}
+                        </span>
+                      </td>
                     </tr>
                     {open && (
                       <tr className="admin-row-expand">
                         <td colSpan={6}>
-                          <div className="admin-expand-body">
-                            <div>
-                              <strong>Notes</strong>
-                              <p>{c.notes || <em className="admin-meta">No notes</em>}</p>
-                              {c.circle_id && (
-                                <p className="admin-meta">Linked circle: <code>{c.circle_id}</code></p>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.8rem' }}>
-                              <button type="button" className="btn-link"
-                                      onClick={(e) => { e.stopPropagation(); openEdit(c) }}>
-                                Edit
-                              </button>
-                              {c.status !== 'converted' && (
-                                <button type="button" className="btn-link"
-                                        onClick={(e) => { e.stopPropagation(); openConvert(c) }}>
-                                  Convert
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {converting && (
-                            <div className="admin-panel" onClick={(e) => e.stopPropagation()}>
-                              <h3 className="form-subhead">Convert lead to customer</h3>
-                              <p className="admin-meta admin-section-sub">
-                                Has this person signed up? Search by email or name to find their account.
-                              </p>
-                              {convertError && <div className="auth-error" role="alert">{convertError}</div>}
-                              <div className="form-row">
-                                <label className="form-label" style={{ flex: 1 }}>
-                                  Email or name
-                                  <input type="text" value={convertSearch}
-                                         onChange={(e) => setConvertSearch(e.target.value)}
-                                         className="form-input" />
-                                </label>
-                                <button type="button" className="btn-secondary"
-                                        onClick={runConvertSearch} disabled={convertLoading}>
-                                  {convertLoading ? 'Searching…' : 'Search'}
-                                </button>
-                              </div>
-                              {convertResults.length === 0 && convertSearch && !convertLoading ? (
-                                <p className="page-placeholder">
-                                  No account found. Share the signup link with them:{' '}
-                                  <code>app.noworry-home.com/signup</code>
-                                </p>
-                              ) : convertResults.length > 0 ? (
-                                <ul className="systems-list">
-                                  {convertResults.map((cust) => (
-                                    <li key={cust.circle_id} className="system-row">
-                                      <div className="system-main">
-                                        <span className="system-name">{cust.first_name} {cust.last_name}</span>
-                                        <span className="system-meta">{cust.email}</span>
-                                      </div>
-                                      <button type="button" className="btn-link"
-                                              onClick={() => linkAccount(c, cust)}>
-                                        Link Account
-                                      </button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : null}
-                              <div className="admin-panel-actions">
-                                <button type="button" className="btn-back"
-                                        onClick={closeConvert}>Cancel</button>
-                              </div>
-                            </div>
-                          )}
+                          <LeadDetail
+                            lead={l}
+                            busy={busyId === l.id}
+                            onStatusChange={(s) => updateStatus(l, s)}
+                            onSpam={() => markSpam(l)}
+                            onConvert={() => convertLead(l)}
+                          />
                         </td>
                       </tr>
                     )}
@@ -365,4 +301,105 @@ export default function CRMLeadsTab({ onChange }) {
       )}
     </div>
   )
+}
+
+function LeadDetail({ lead, busy, onStatusChange, onSpam, onConvert }) {
+  const flags = Array.isArray(lead.spam_flags) ? lead.spam_flags : []
+  return (
+    <div className="admin-expand-body">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div>
+          {lead.message && (
+            <>
+              <strong>Message</strong>
+              <p style={{ whiteSpace: 'pre-wrap' }}>{lead.message}</p>
+            </>
+          )}
+          {!lead.message && <em className="admin-meta">No message</em>}
+
+          {lead.zip && <p><strong>ZIP:</strong> {lead.zip}</p>}
+
+          {lead.payload && Object.keys(lead.payload).length > 0 && (
+            <>
+              <strong>Form fields</strong>
+              <pre style={{
+                background: '#F4F2EE', padding: '0.6rem', borderRadius: '0.4rem',
+                fontSize: '0.85rem', overflow: 'auto', marginTop: '0.4rem',
+              }}>{JSON.stringify(lead.payload, null, 2)}</pre>
+            </>
+          )}
+        </div>
+
+        <div>
+          <p className="admin-meta">
+            <strong>Source:</strong> {lead.source_url || lead.source_page || '—'}
+          </p>
+          {lead.referrer && (
+            <p className="admin-meta"><strong>Referrer:</strong> {lead.referrer}</p>
+          )}
+          {lead.user_agent && (
+            <p className="admin-meta admin-cell-truncate">
+              <strong>UA:</strong> {lead.user_agent}
+            </p>
+          )}
+          {lead.contacted_at && (
+            <p className="admin-meta">
+              <strong>Contacted:</strong> {fmtDateTime(lead.contacted_at)}
+            </p>
+          )}
+          {lead.converted_at && (
+            <p className="admin-meta">
+              <strong>Converted:</strong> {fmtDateTime(lead.converted_at)}
+              {lead.converted_to && ` → ${CONVERTED_TO_LABEL[lead.converted_to] ?? lead.converted_to}`}
+            </p>
+          )}
+          {lead.spam_score > 0 && (
+            <p className="admin-meta">
+              <strong>Spam score:</strong> {lead.spam_score}
+              {flags.length > 0 && ` (${flags.join(', ')})`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', marginTop: '1rem' }}
+           onClick={(e) => e.stopPropagation()}>
+        <label className="form-label" style={{ marginBottom: 0 }}>
+          Status
+          <select className="form-input" value={lead.status} disabled={busy}
+                  onChange={(e) => onStatusChange(e.target.value)}>
+            {STATUSES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </label>
+
+        {lead.status !== 'converted' && lead.status !== 'spam' && (
+          <button type="button" className="btn-link" disabled={busy}
+                  onClick={onConvert}>
+            Convert to {convertTargetLabel(lead.lead_type)}
+          </button>
+        )}
+
+        {lead.status !== 'spam' && (
+          <button type="button" className="btn-link" disabled={busy}
+                  onClick={onSpam}>
+            Mark as spam
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function convertTargetLabel(leadType) {
+  if (leadType === 'vendor_application') return 'Vendor'
+  if (leadType === 'partner_inquiry') return 'Partner'
+  return 'Prospect'
+}
+
+function leadConversionNote(lead) {
+  const parts = []
+  parts.push(`Converted from website lead (${LEAD_TYPE_LABEL[lead.lead_type] ?? lead.lead_type})`)
+  if (lead.source_page) parts.push(`Source: ${lead.source_page}`)
+  if (lead.message) parts.push('', lead.message)
+  return parts.join('\n')
 }
