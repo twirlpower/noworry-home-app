@@ -1946,6 +1946,44 @@ textarea.form-input {
   }
   .app-nav-user .user-name { margin-bottom: 0; }
 
+  /* View switcher: collapse the stacked-pill desktop layout into a
+     horizontal scrollable row so it stays visible next to the nav-links
+     row instead of becoming a tall block above the fold. */
+  .view-switcher {
+    padding: 0.4rem 0.2rem;
+    margin: 0;
+    border-bottom: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+  .view-switcher-label {
+    margin: 0;
+    white-space: nowrap;
+  }
+  .view-switcher-pills {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.4rem;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+  }
+  .view-switcher-pill {
+    min-height: 44px;
+    padding: 0.45rem 0.85rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  /* Description is redundant in the chip form; the title carries enough
+     meaning ("Family view" etc.). Keeps each pill thumb-friendly. */
+  .view-switcher-desc { display: none; }
+  .view-switcher-tip {
+    flex-basis: 100%;
+    margin: 0.4rem 0 0;
+  }
+
   .app-main { margin-left: 0; padding: 1.4rem 1.1rem; }
 
   .dashboard-grid { grid-template-columns: 1fr; }
@@ -4094,6 +4132,11 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   padding: 0.6rem 0.8rem;
   margin: 0 0.4rem 0.6rem;
   border-bottom: 1px solid var(--cool);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.view-switcher-pills {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;

@@ -3,6 +3,9 @@ import { track } from '../lib/analytics'
 
 function platformLabel() {
   if (typeof navigator === 'undefined') return 'unknown'
+  // Samsung first — its UA also matches /android/, but we want the more
+  // specific bucket for analytics consistency with the manual-hint path.
+  if (/SamsungBrowser/i.test(navigator.userAgent)) return 'samsung'
   if (/android/i.test(navigator.userAgent)) return 'android'
   if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return 'ios'
   return 'desktop'
@@ -39,6 +42,15 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
 }
 
+// Samsung Internet is Chromium-based but doesn't reliably fire
+// beforeinstallprompt — users on default Galaxy phones get no prompt.
+// Treat them like iOS Safari: show manual Add-to-Home-Screen
+// instructions instead of waiting forever for an event that won't come.
+function isSamsungBrowser() {
+  if (typeof navigator === 'undefined') return false
+  return /SamsungBrowser/i.test(navigator.userAgent)
+}
+
 // Phones and tablets only — desktop visitors get nothing (they're unlikely
 // to install a home-screen icon and the banner just adds noise). Touch-as-
 // primary-input is the cleanest signal; UA sniff is a fallback for browsers
@@ -56,7 +68,9 @@ function isMobileOrTablet() {
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [show, setShow] = useState(false)
-  const [iosMode, setIosMode] = useState(false)
+  // null  → show native install button (we have a deferredPrompt to fire)
+  // 'ios' / 'samsung' → show manual Add-to-Home-Screen instructions
+  const [manualHint, setManualHint] = useState(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -76,14 +90,25 @@ export default function InstallPrompt() {
     // instructions after the engagement delay.
     if (isIOS()) {
       const t = setTimeout(() => {
-        setIosMode(true)
+        setManualHint('ios')
         setShow(true)
         track('pwa_install_prompted', { platform: 'ios' })
       }, DELAY_MS)
       return () => clearTimeout(t)
     }
 
-    // Android + desktop Chrome path — wait for the browser's event.
+    // Samsung Internet path — Chromium-based but doesn't reliably fire
+    // beforeinstallprompt. Show manual instructions, same as iOS.
+    if (isSamsungBrowser()) {
+      const t = setTimeout(() => {
+        setManualHint('samsung')
+        setShow(true)
+        track('pwa_install_prompted', { platform: 'samsung' })
+      }, DELAY_MS)
+      return () => clearTimeout(t)
+    }
+
+    // Android Chrome + desktop Chrome path — wait for the browser's event.
     function onBeforeInstall(e) {
       e.preventDefault()
       setDeferredPrompt(e)
@@ -128,13 +153,21 @@ export default function InstallPrompt() {
             Add NoWorry Home to your home screen
           </h3>
 
-          {iosMode ? (
+          {manualHint === 'ios' && (
             <p className="install-prompt-text">
               Tap the <strong>Share</strong> button below, then{' '}
               <strong>Add to Home Screen</strong> — and NoWorry Home opens
               like an app, right from your phone.
             </p>
-          ) : (
+          )}
+          {manualHint === 'samsung' && (
+            <p className="install-prompt-text">
+              Tap the <strong>menu</strong> at the bottom of your browser,
+              then <strong>Add page to → Home screen</strong> — and NoWorry
+              Home opens like an app, right from your phone.
+            </p>
+          )}
+          {manualHint === null && (
             <p className="install-prompt-text">
               Get to your home, your family, and your peace of mind with one
               tap. No browser. No fuss.
@@ -142,7 +175,7 @@ export default function InstallPrompt() {
           )}
 
           <div className="install-prompt-actions">
-            {!iosMode && (
+            {manualHint === null && (
               <button
                 type="button"
                 className="install-prompt-primary"
@@ -156,7 +189,7 @@ export default function InstallPrompt() {
               className="install-prompt-secondary"
               onClick={dismiss}
             >
-              {iosMode ? 'Got it' : 'Not now'}
+              {manualHint ? 'Got it' : 'Not now'}
             </button>
           </div>
         </div>

@@ -176,22 +176,24 @@ export default function AppShell() {
         {views.length > 1 && (
           <div className="view-switcher" aria-label="Switch view">
             <p className="view-switcher-label">View</p>
-            {views.map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`view-switcher-pill ${activeView === v ? 'on' : ''}`}
-                onClick={() => {
-                  switchView(v)
-                  const path = VIEW_DEFAULT_PATH[v] || '/dashboard'
-                  navigate(path)
-                }}
-                aria-pressed={activeView === v}
-              >
-                <span className="view-switcher-title">{VIEW_LABELS[v]}</span>
-                <span className="view-switcher-desc">{VIEW_DESCRIPTIONS[v]}</span>
-              </button>
-            ))}
+            <div className="view-switcher-pills">
+              {views.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`view-switcher-pill ${activeView === v ? 'on' : ''}`}
+                  onClick={() => {
+                    switchView(v)
+                    const path = VIEW_DEFAULT_PATH[v] || '/dashboard'
+                    navigate(path)
+                  }}
+                  aria-pressed={activeView === v}
+                >
+                  <span className="view-switcher-title">{VIEW_LABELS[v]}</span>
+                  <span className="view-switcher-desc">{VIEW_DESCRIPTIONS[v]}</span>
+                </button>
+              ))}
+            </div>
             {!viewTipDismissed && (
               <div className="view-switcher-tip" role="status">
                 <strong>New:</strong> Switch between your views here.
