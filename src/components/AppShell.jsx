@@ -224,7 +224,15 @@ export default function AppShell() {
               </>
             )}
 
-            {isStaff && (
+            {/* Staff sub-nav: cross-circle founder/operations tools (CRM,
+                Member Map, Properties, Finance, Reports). Gated on
+                isStaff (truthy only when staff_accounts has an active
+                row for this user_id). Hidden additionally whenever
+                viewMode === 'member' so the "View as Member" dogfood
+                path gives a true member-only experience. A pure
+                circle_manager with no staff_accounts row never sees
+                any of this. */}
+            {isStaff && viewMode !== 'member' && (
               <div className="admin-nav-section">
                 <button
                   type="button"

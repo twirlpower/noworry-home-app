@@ -1946,6 +1946,52 @@ textarea.form-input {
   }
   .app-nav-user .user-name { margin-bottom: 0; }
 
+  /* Staff admin sub-nav: was designed for the desktop vertical sidebar
+     (margin-top:auto pushed it to the bottom, items stacked, collapsible
+     toggle). On mobile the parent .app-nav-links is a horizontal scroll
+     row, so we flatten the whole section into in-line chips matching
+     the member nav-link style. The collapsible toggle stays so users
+     can hide the staff items when they're noisy. */
+  .admin-nav-section {
+    margin: 0;
+    padding: 0;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+  .admin-nav-toggle {
+    min-height: 48px;
+    padding: 0.5rem 0.85rem;
+    background: var(--cool);
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    font-size: 0.78rem;
+    gap: 0.3rem;
+  }
+  .admin-nav-items {
+    flex-direction: row;
+    gap: 0.4rem;
+    margin: 0;
+  }
+  .admin-nav-items .nav-link {
+    min-height: 48px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .view-as-member-link {
+    border-top: none;
+    margin: 0;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+  }
+
   /* View switcher: collapse the stacked-pill desktop layout into a
      horizontal scrollable row so it stays visible next to the nav-links
      row instead of becoming a tall block above the fold. */

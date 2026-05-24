@@ -74,6 +74,15 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // Debug escape hatch — visiting any page with ?reset-pwa-prompt=true
+    // clears the dismissed flag so the prompt fires again on this device
+    // without having to wipe browser storage. Useful for QA on a single
+    // Samsung phone where the previous dismissal needs to be re-tested.
+    try {
+      if (new URLSearchParams(window.location.search).get('reset-pwa-prompt') === 'true') {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    } catch { /* ignore — proceed with normal flow */ }
     // Don't show if dismissed previously.
     try {
       if (localStorage.getItem(STORAGE_KEY)) return
