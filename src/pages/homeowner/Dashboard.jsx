@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useCircle } from '../../context/CircleContext'
 import { computeHomeHealth } from '../../lib/homeHealth'
+import { SAFETY_ITEMS } from '../../lib/safetyItems'
 
 // Homeowner view dashboard — Phase 3a.
 // Emotional register: calm, dignified, simple. The 80-year-old
@@ -65,21 +66,24 @@ export default function HomeownerDashboard() {
       }
 
       // Inputs the health helper expects: systems, scheduled tasks,
-      // safety items. Two parallel queries — cheap.
+      // safety items. Three parallel queries — cheap.
       const [systemsRes, schedRes, safetyRes] = await Promise.all([
         supabase.from('home_systems').select('*').eq('home_id', ch.homes.id).eq('is_active', true),
         supabase.from('scheduled_maintenance').select('*').eq('home_id', ch.homes.id).eq('status', 'open'),
-        supabase.from('safety_status').select('done').eq('home_id', ch.homes.id),
+        supabase.from('safety_checklist').select('item_key, is_complete').eq('circle_id', activeCircle.id),
       ])
       if (cancelled) return
 
-      const safetyDone = (safetyRes?.data ?? []).filter((r) => r.done).length
-      const safetyTotal = safetyRes?.data?.length ?? 0
+      const safetyDone = (safetyRes?.data ?? []).filter((r) => r.is_complete).length
+      // Denominator is the static universe of safety items, not the DB
+      // row count. safety_checklist only stores rows for items the user
+      // has touched — using row count would always yield "done = total"
+      // once anything was completed.
       const result = computeHomeHealth(
         ch.homes,
         systemsRes?.data ?? [],
         schedRes?.data ?? [],
-        { done: safetyDone, total: safetyTotal },
+        { done: safetyDone, total: SAFETY_ITEMS.length },
       )
       setScore(result.score)
       setTone(result.tone)
