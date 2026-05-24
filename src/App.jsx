@@ -16,7 +16,6 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Onboarding from './pages/Onboarding'
-import Dashboard from './pages/Dashboard'
 import HomeProfile from './pages/HomeProfile'
 import Maintenance from './pages/Maintenance'
 import Safety from './pages/Safety'
@@ -34,8 +33,12 @@ import AdminReports from './pages/admin/AdminReports'
 import AdminFinance from './pages/admin/AdminFinance'
 import AdminMemberList from './pages/admin/AdminMemberList'
 import HomeownerDashboard from './pages/homeowner/Dashboard'
+import FamilyDashboard from './pages/family/Dashboard'
+import CircleAdminDashboard from './pages/admin/Dashboard'
 import { useStaffRole } from './hooks/useStaffRole'
 import { useCircle } from './context/CircleContext'
+import { useView } from './context/ViewContext'
+import { VIEW_DEFAULT_PATH } from './utils/availableViews'
 
 // Role-based admin gate. Non-staff bounce silently to /dashboard. While the
 // role lookup is in flight we render nothing — better than flashing the
@@ -50,20 +53,33 @@ function AdminRoute({ children, requireOwner = false }) {
 
 // Index route. Three destinations:
 //   * Staff (any role)             → /admin/crm
-//   * Member with an active circle → /dashboard
+//   * Member with an active circle → that user's active view default
+//                                    (/home | /family | /admin)
 //   * Member without a circle      → /onboarding
 //
-// Both useStaffRole and useCircle are async (Supabase lookups). Render
-// nothing while either is still resolving — otherwise a member would
-// flash through /dashboard before their staff role lookup resolves, or
-// a staff account would briefly see the member onboarding screen.
+// useStaffRole, useCircle, and useView are all dependent on async Supabase
+// lookups (the membership row → role → views chain). Render nothing while
+// staff or circle data is still resolving so we don't flash the wrong
+// screen.
 function RootRedirect() {
   const { isStaff, loading: staffLoading } = useStaffRole()
   const { activeCircle, loading: circleLoading } = useCircle()
+  const { activeView } = useView()
   if (staffLoading || circleLoading) return null
   if (isStaff) return <Navigate to="/admin/crm" replace />
-  if (activeCircle) return <Navigate to="/dashboard" replace />
+  if (activeCircle) {
+    const target = VIEW_DEFAULT_PATH[activeView] || '/family'
+    return <Navigate to={target} replace />
+  }
   return <Navigate to="/onboarding" replace />
+}
+
+// Tiny helper used by the legacy /dashboard alias — picks the right
+// per-view destination so old bookmarks land on the right screen.
+function ViewRouter() {
+  const { activeView } = useView()
+  const target = VIEW_DEFAULT_PATH[activeView] || '/family'
+  return <Navigate to={target} replace />
 }
 
 export default function App() {
@@ -90,8 +106,13 @@ export default function App() {
               <ProtectedRoute><AppShell /></ProtectedRoute>
             }>
               <Route index element={<RootRedirect />} />
-              <Route path="dashboard" element={<Dashboard />} />
+              {/* Legacy /dashboard kept as a redirect alias so old bookmarks
+                  and PromptCard upgrade links still land in the right place
+                  for the user's active view. */}
+              <Route path="dashboard" element={<ViewRouter />} />
               <Route path="home" element={<HomeownerDashboard />} />
+              <Route path="family" element={<FamilyDashboard />} />
+              <Route path="admin" element={<CircleAdminDashboard />} />
               <Route path="home-profile" element={<HomeProfile />} />
               <Route path="maintenance" element={<Maintenance />} />
               <Route path="safety" element={<Safety />} />

@@ -15,6 +15,40 @@ import { getHomeDisplayName } from '../utils/homeDisplayName'
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
 const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
 
+// Per-view sidebar nav. Homeowner sees a minimal set focused on the
+// home itself; family + admin both get the coordination tools, with
+// the dashboard link diverging (Family → /family, Admin → /admin).
+// Three components in three folders, not one component with conditionals.
+const NAV_BY_VIEW = {
+  homeowner: [
+    { to: '/home',         label: 'Home' },
+    { to: '/home-profile', label: 'Home Profile' },
+    { to: '/settings',     label: 'Settings' },
+  ],
+  family: [
+    { to: '/family',              label: 'Dashboard' },
+    { to: '/tasks',               label: 'Tasks' },
+    { to: '/circle',              label: 'My Circle' },
+    { to: '/maintenance',         label: 'Maintenance' },
+    { to: '/safety',              label: 'Safety' },
+    { to: '/documents',           label: 'Documents' },
+    { to: '/emergency-contacts',  label: 'Emergency Contacts' },
+    { to: '/home-profile',        label: 'Home Profile' },
+    { to: '/settings',            label: 'Settings' },
+  ],
+  admin: [
+    { to: '/admin',               label: 'Dashboard' },
+    { to: '/circle',              label: 'Members' },
+    { to: '/tasks',               label: 'Tasks' },
+    { to: '/maintenance',         label: 'Maintenance' },
+    { to: '/safety',              label: 'Safety' },
+    { to: '/documents',           label: 'Documents' },
+    { to: '/emergency-contacts',  label: 'Emergency Contacts' },
+    { to: '/home-profile',        label: 'Home Profile' },
+    { to: '/settings',            label: 'Settings' },
+  ],
+}
+
 export default function AppShell() {
   const { person, signOut } = useAuth()
   const { circles, activeCircle, switchCircle } = useCircle()
@@ -179,33 +213,11 @@ export default function AppShell() {
           <div className="app-nav-links">
             {activeCircle && (
               <>
-                <NavLink to="/dashboard" className="nav-link">
-                  Dashboard
-                </NavLink>
-                <NavLink to="/home-profile" className="nav-link">
-                  My Home
-                </NavLink>
-                <NavLink to="/maintenance" className="nav-link">
-                  Maintenance
-                </NavLink>
-                <NavLink to="/safety" className="nav-link">
-                  Safety
-                </NavLink>
-                <NavLink to="/documents" className="nav-link">
-                  Documents
-                </NavLink>
-                <NavLink to="/emergency-contacts" className="nav-link">
-                  Emergency Contacts
-                </NavLink>
-                <NavLink to="/tasks" className="nav-link">
-                  Tasks
-                </NavLink>
-                <NavLink to="/circle" className="nav-link">
-                  My Circle
-                </NavLink>
-                <NavLink to="/settings" className="nav-link">
-                  Settings
-                </NavLink>
+                {(NAV_BY_VIEW[activeView] || NAV_BY_VIEW.family).map((item) => (
+                  <NavLink key={item.to} to={item.to} className="nav-link">
+                    {item.label}
+                  </NavLink>
+                ))}
               </>
             )}
 

@@ -19,6 +19,7 @@ export function availableViews(role) {
       // to dogfood what the homeowner sees.
       return ['family', 'admin', 'homeowner']
     case 'care_partner':
+    case 'care_coordinator':
     case 'family_member':
       return ['family']
     case 'helper':
@@ -29,6 +30,9 @@ export function availableViews(role) {
       return ['family']
     case 'trusted_advisor':
       // Pillar-restricted, read-only.
+      return ['family']
+    case 'view_only':
+      // Read-only across the family surface.
       return ['family']
     default:
       return ['family']
@@ -47,11 +51,11 @@ export const VIEW_DESCRIPTIONS = {
   admin:     'Manage members and billing',
 }
 
-// Default landing path per view. Phase 3a only mints /home; family
-// and admin still land on the existing /dashboard until Phase 3b
-// migrates them.
+// Default landing path per view. Phase 3b mints /family and /admin as
+// the dedicated dashboards for those views (legacy /dashboard remains
+// as a redirect alias via <ViewRouter />).
 export const VIEW_DEFAULT_PATH = {
   homeowner: '/home',
-  family:    '/dashboard',
-  admin:     '/dashboard',
+  family:    '/family',
+  admin:     '/admin',
 }
