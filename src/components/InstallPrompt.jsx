@@ -31,6 +31,20 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream
 }
 
+// Phones and tablets only — desktop visitors get nothing (they're unlikely
+// to install a home-screen icon and the banner just adds noise). Touch-as-
+// primary-input is the cleanest signal; UA sniff is a fallback for browsers
+// missing the media query.
+function isMobileOrTablet() {
+  if (typeof window === 'undefined') return false
+  if (window.matchMedia?.('(pointer: coarse)')?.matches) return true
+  if (typeof navigator !== 'undefined' &&
+      /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)) {
+    return true
+  }
+  return false
+}
+
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [show, setShow] = useState(false)
@@ -45,6 +59,10 @@ export default function InstallPrompt() {
 
     // Don't show if already installed.
     if (isStandalone()) return
+
+    // Don't show on desktop — the "add to home screen" framing makes no
+    // sense there, and desktop visitors typically aren't the target.
+    if (!isMobileOrTablet()) return
 
     // iOS path — Safari doesn't fire beforeinstallprompt. Show manual
     // instructions after the engagement delay.
