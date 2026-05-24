@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react'
 import './PreparedReveal.css'
+import { track } from '../lib/analytics'
 
 // Aware → Prepared conversion moment. Approved-design build, see spec.
 // Trigger gating lives in Dashboard (subscription_tier === 'aware' AND not
@@ -30,6 +32,20 @@ export default function PreparedReveal({
 
   const planDone = !!hasPlanItems
   const familyDone = !!hasFamily
+
+  // Fire reveal_moment_viewed exactly once per mount. useRef gate keeps
+  // StrictMode's double-invoke in dev from sending the event twice.
+  const viewedRef = useRef(false)
+  useEffect(() => {
+    if (viewedRef.current) return
+    viewedRef.current = true
+    track('reveal_moment_viewed', { home_health_score: safeScore })
+  }, [safeScore])
+
+  function handleCta() {
+    track('reveal_moment_cta_clicked')
+    onStartTrial?.()
+  }
 
   return (
     <section className="prepared-reveal" aria-labelledby="prepared-reveal-title">
@@ -98,7 +114,7 @@ export default function PreparedReveal({
         <button
           type="button"
           className="pr-cta"
-          onClick={onStartTrial}
+          onClick={handleCta}
           disabled={loading}
           aria-busy={loading || undefined}
         >

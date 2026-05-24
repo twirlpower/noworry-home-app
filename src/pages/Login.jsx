@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ConsentBanner from '../components/ConsentBanner'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -69,6 +70,7 @@ export default function Login() {
           <Link to="/signup">Create an account</Link>
         </div>
       </div>
+      <ConsentBanner />
     </div>
   )
 }

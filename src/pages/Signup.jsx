@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ConsentBanner from '../components/ConsentBanner'
+import { track } from '../lib/analytics'
 
 export default function Signup() {
   const [step, setStep] = useState('identity') // identity → details → home
@@ -24,6 +26,12 @@ export default function Signup() {
       setError(signUpError.message)
       setLoading(false)
     } else {
+      // Anon event — distinct_id stitches to the identified profile
+      // once AuthContext fires identify() after the session resolves.
+      track('user_signed_up', {
+        signup_path: setupType === 'self' ? 'self' : 'on_behalf',
+        source: 'direct',
+      })
       // Navigate to onboarding flow based on setup type
       navigate('/onboarding', { state: { setupType } })
     }
@@ -75,6 +83,7 @@ export default function Signup() {
             <Link to="/login">Already have an account? Sign in</Link>
           </div>
         </div>
+        <ConsentBanner />
       </div>
     )
   }
@@ -155,6 +164,7 @@ export default function Signup() {
           <Link to="/login">Already have an account? Sign in</Link>
         </div>
       </div>
+      <ConsentBanner />
     </div>
   )
 }

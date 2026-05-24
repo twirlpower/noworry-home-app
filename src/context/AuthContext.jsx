@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { identify, resetIdentity, track, getConsent } from '../lib/analytics'
 
 const AuthContext = createContext({})
 
@@ -15,12 +16,21 @@ export function AuthProvider({ children }) {
       else setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) loadPerson(session.user.id)
-      else {
+      if (session?.user) {
+        loadPerson(session.user.id)
+        if (event === 'SIGNED_IN' && getConsent()) {
+          // Initial identify with what we know now (auth user); the
+          // persons-row + circle/role properties get merged in below
+          // by the person-resolved effect.
+          track('user_logged_in')
+        }
+      } else {
         setPerson(null)
         setLoading(false)
+        // Clear the PostHog distinct_id so the next user starts clean.
+        resetIdentity()
       }
     })
 
@@ -37,6 +47,18 @@ export function AuthProvider({ children }) {
       .maybeSingle()
     setPerson(data)
     setLoading(false)
+
+    // Tie this browser to the persons.id distinct_id. Use the persons
+    // PK (not auth.uid()) — that's what keeps a single human stable
+    // across email changes, role flips, and the marketing-site →
+    // app handoff. Circle/role properties get added by CircleContext
+    // once memberships resolve.
+    if (data?.id && getConsent()) {
+      identify(data.id, {
+        email: data.email,
+        signup_date: data.created_at,
+      })
+    }
   }
 
   // Re-pull the current person's row after an edit (Settings → My Profile) so

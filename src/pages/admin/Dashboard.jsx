@@ -13,6 +13,7 @@ import PreparedReveal from '../../components/PreparedReveal'
 import PromptCard from '../../components/PromptCard'
 import PaymentModal from '../../components/PaymentModal'
 import DowngradeConfirmModal from '../../components/DowngradeConfirmModal'
+import { track, updateUserProperties, getConsent } from '../../lib/analytics'
 
 const MS_PER_DAY = 86400000
 const TRIAL_TOTAL_DAYS = 30
@@ -188,6 +189,22 @@ export default function Dashboard() {
 
     applyCircleUpdate(activeCircle.id, patch)
     setTrialLoading(false)
+
+    // The board's primary conversion lever — Aware → Prepared. Two
+    // events here intentionally: tier_upgraded for the funnel, and
+    // trial_started for the trial cohort analyses. updateUserProperties
+    // keeps the user's current_tier in sync so segmentation queries
+    // see them on the right side immediately.
+    const fromTier = activeCircle.subscription_tier ?? null
+    track('trial_started', { tier: 'prepared' })
+    track('tier_upgraded', {
+      from_tier: fromTier,
+      to_tier: 'prepared',
+      trigger: 'reveal_moment',
+    })
+    if (getConsent()) {
+      updateUserProperties({ current_tier: 'prepared' })
+    }
   }
 
   useEffect(() => {

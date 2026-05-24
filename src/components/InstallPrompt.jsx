@@ -1,4 +1,12 @@
 import { useEffect, useState } from 'react'
+import { track } from '../lib/analytics'
+
+function platformLabel() {
+  if (typeof navigator === 'undefined') return 'unknown'
+  if (/android/i.test(navigator.userAgent)) return 'android'
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return 'ios'
+  return 'desktop'
+}
 
 // PWA install prompt. Shows a warm in-app card after the user has had
 // a chance to engage with the app (~8s after mount), inviting them to
@@ -70,6 +78,7 @@ export default function InstallPrompt() {
       const t = setTimeout(() => {
         setIosMode(true)
         setShow(true)
+        track('pwa_install_prompted', { platform: 'ios' })
       }, DELAY_MS)
       return () => clearTimeout(t)
     }
@@ -78,7 +87,10 @@ export default function InstallPrompt() {
     function onBeforeInstall(e) {
       e.preventDefault()
       setDeferredPrompt(e)
-      setTimeout(() => setShow(true), DELAY_MS)
+      setTimeout(() => {
+        setShow(true)
+        track('pwa_install_prompted', { platform: platformLabel() })
+      }, DELAY_MS)
     }
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
     return () => window.removeEventListener('beforeinstallprompt', onBeforeInstall)
@@ -88,9 +100,13 @@ export default function InstallPrompt() {
     if (!deferredPrompt) return
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
+    const platform = platformLabel()
     if (outcome === 'accepted') {
       setShow(false)
       try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* ignore */ }
+      track('pwa_install_accepted', { platform })
+    } else {
+      track('pwa_install_dismissed', { platform })
     }
     setDeferredPrompt(null)
   }
@@ -98,6 +114,7 @@ export default function InstallPrompt() {
   function dismiss() {
     setShow(false)
     try { localStorage.setItem(STORAGE_KEY, '1') } catch { /* ignore */ }
+    track('pwa_install_dismissed', { platform: platformLabel() })
   }
 
   if (!show) return null

@@ -4358,6 +4358,73 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
 }
 .install-prompt-secondary:hover { color: var(--text); border-color: var(--clay); }
 
+/* ── Consent / privacy banner (ConsentBanner.jsx) ───────────────────────── */
+.consent-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  max-width: 520px;
+  margin: 0 auto;
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(10, 74, 48, 0.18);
+  padding: 1.2rem 1.4rem;
+  z-index: 1100;
+  font-family: var(--font);
+}
+
+.consent-banner-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--deep);
+  margin-bottom: 0.45rem;
+  line-height: 1.35;
+}
+
+.consent-banner-body {
+  font-size: 0.95rem;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 0.95rem;
+}
+
+.consent-banner-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.consent-banner-allow {
+  min-height: 44px;
+  padding: 0.55rem 1.2rem;
+  background: var(--teal);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.consent-banner-allow:hover { background: var(--dark-teal); }
+
+.consent-banner-deny {
+  min-height: 44px;
+  padding: 0.55rem 1.2rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--cool);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.consent-banner-deny:hover { color: var(--text); border-color: var(--clay); }
+
 /* ── Trusted Advisor grant management (Circle.jsx) ──────────────────────── */
 .advisor-grants-panel {
   margin-top: 0.7rem;

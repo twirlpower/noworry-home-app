@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from 'react'
 import { useCircle } from './CircleContext'
 import { availableViews } from '../utils/availableViews'
+import { track } from '../lib/analytics'
 
 // Phase 3a perspective layer — a "view" is a UI surface the user has
 // chosen to operate in right now (homeowner / family / admin). It's
@@ -40,8 +41,16 @@ export function ViewProvider({ children }) {
   function switchView(next) {
     if (!views.includes(next)) return
     if (circleId) {
+      const prev = activeView
       try { localStorage.setItem(keyFor(circleId), next) } catch { /* ignore */ }
       setChoiceByCircle((m) => ({ ...m, [circleId]: next }))
+      if (prev !== next) {
+        track('view_switched', {
+          from_view: prev,
+          to_view:   next,
+          circle_id: circleId,
+        })
+      }
     }
   }
 

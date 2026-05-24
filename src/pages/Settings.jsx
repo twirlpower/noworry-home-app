@@ -7,6 +7,7 @@ import { tierLabel } from '../lib/tiers'
 import PaymentModal from '../components/PaymentModal'
 import DowngradeConfirmModal from '../components/DowngradeConfirmModal'
 import { GENDER_OPTIONS } from '../utils/homeDisplayName'
+import { getConsent, setConsent } from '../lib/analytics'
 
 const MS_PER_DAY = 86400000
 
@@ -91,6 +92,15 @@ export default function Settings() {
   const { person, refreshPerson } = useAuth()
   const { activeCircle, membership, applyCircleUpdate, reloadCircles } = useCircle()
   const canRename = RENAME_ROLES.includes(membership?.role)
+
+  // Analytics consent toggle. Reads from localStorage on mount; the
+  // Allow/Decline buttons write through setConsent() which also flips
+  // PostHog's opt-in state immediately.
+  const [analyticsOn, setAnalyticsOn] = useState(() => getConsent())
+  function toggleAnalytics(next) {
+    setConsent(next)
+    setAnalyticsOn(next)
+  }
 
   // ── About You (identity) ──────────────────────────────────────────────────
   // Pronouns drive the personalized home-display name; DOB is collected
@@ -581,6 +591,43 @@ export default function Settings() {
           Your files are never used for advertising, analytics, or AI
           training — ever.
         </p>
+      </div>
+
+      {/* Privacy: analytics consent toggle. Independent of document-content
+          privacy above — this controls product-usage analytics (clicks,
+          navigation, feature usage) that help us improve the app. Off by
+          default; toggle persists across sessions. */}
+      <div className="profile-card">
+        <h3>Product Analytics</h3>
+        <p>
+          We use anonymous product analytics to understand which features
+          are used, so we can make NoWorry Home better. We never sell your
+          data, and we never include document contents or addresses in
+          what we collect.
+        </p>
+        <p>
+          <strong>Current setting:</strong>{' '}
+          {analyticsOn ? 'Analytics is on.' : 'Analytics is off.'}
+        </p>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {analyticsOn ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => toggleAnalytics(false)}
+            >
+              Turn off analytics
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => toggleAnalytics(true)}
+            >
+              Turn on analytics
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Circle */}

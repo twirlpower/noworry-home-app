@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
 import { normalizeAddress } from '../lib/normalizeAddress'
 import { RELATIONSHIP_OPTIONS } from '../utils/homeDisplayName'
+import { track } from '../lib/analytics'
 
 export default function Onboarding() {
   const location = useLocation()
@@ -15,6 +16,9 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(setupType === 'other' ? 'homeowner' : 'home')
   const [loading, setLoading] = useState(false)
+  // Captured at mount so time_to_complete_seconds reflects the actual
+  // session, not the time since the last re-render.
+  const onboardingStartedAt = useRef(Date.now())
   const [error, setError] = useState('')
   const [createdCircleId, setCreatedCircleId] = useState(null)
   // Set when check_home_address_taken finds an active circle at the
@@ -281,6 +285,11 @@ export default function Onboarding() {
   }
 
   async function finishOnboarding() {
+    track('onboarding_completed', {
+      path_taken: setupType === 'self' ? 'A' : 'B',
+      relationship_kind: setupType === 'other' ? relationshipKind : 'self',
+      time_to_complete_seconds: Math.round((Date.now() - onboardingStartedAt.current) / 1000),
+    })
     await reloadCircles()
     navigate('/dashboard')
   }
