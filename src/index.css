@@ -387,6 +387,7 @@ select.form-input {
    the bottom via margin-top:auto. */
 .nav-hamburger { display: none; }
 .nav-overlay   { display: none; }
+.nav-drawer-close { display: none; }
 .nav-drawer {
   display: flex;
   flex-direction: column;
@@ -2004,6 +2005,29 @@ textarea.form-input {
     gap: 0.6rem;
   }
   .nav-drawer-open { transform: translateX(0); }
+
+  /* In-drawer close button. Right-aligned via align-self so it sits
+     at the top-right corner where users expect it (mirror of the
+     hamburger position on the page header). Same visual vocabulary
+     as .nav-hamburger so the open/close pair feel related. */
+  .nav-drawer-close {
+    display: inline-flex;
+    align-self: flex-end;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0.4rem 0.6rem;
+    background: transparent;
+    border: 1.5px solid var(--cool);
+    border-radius: var(--radius-sm);
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--deep);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-drawer-close:hover { background: var(--off-white); }
 
   /* Inside the drawer, the existing desktop nav styles apply — items
      stack vertically, full-width, with the same padding. The only

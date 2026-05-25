@@ -207,6 +207,21 @@ export default function AppShell() {
           className={`nav-drawer ${drawerOpen ? 'nav-drawer-open' : ''}`}
           onClick={handleDrawerClick}
         >
+        {/* In-drawer close button. The hamburger at the top of the
+            page also flips to ✕ when the drawer is open, but it sits
+            behind the 320px drawer on mobile so it's effectively
+            invisible. This button gives the user a real, visible
+            target right where their eye lands when the drawer slides
+            in. Display:none on desktop (the existing media query). */}
+        <button
+          type="button"
+          className="nav-drawer-close"
+          aria-label="Close menu"
+          onClick={() => setDrawerOpen(false)}
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+
         {isStaff && viewMode === 'member' && (
           <div className="admin-mode-banner" role="status">
             <span>🔧 Admin Mode</span>
@@ -290,7 +305,7 @@ export default function AppShell() {
             )}
 
             {/* Staff sub-nav: cross-circle founder/operations tools (CRM,
-                Member Map, Properties, Finance, Reports). Three layered
+                Member Map, Properties, Finance, Reports). Four layered
                 gates so the right surface shows for each kind of user:
                   1. isStaff — truthy only when staff_accounts has an
                      active row for this user_id. A pure circle_manager
@@ -299,19 +314,31 @@ export default function AppShell() {
                   2. viewMode !== 'member' — the legacy "View as Member"
                      dogfood toggle (MEMBER_VIEW_KEY) gives a clean
                      member-only experience.
-                  3. !activeCircle || activeView === 'admin' — the
-                     dual-role case. A user with both a staff_accounts
-                     row AND a circle_manager membership (e.g. the
-                     seeded tye.olmsted@oakraa.com from migration 018)
-                     gets ViewContext perspectives [family, admin,
-                     homeowner]. When they switch to the family or
-                     homeowner perspective they're explicitly "wearing
-                     the member hat" — hide the founder tools. A pure
-                     staff user with no circle membership has
-                     activeCircle = null and always sees the nav.
-                     Without this gate the dual-role user sees founder
-                     tools across every view, which was the leak. */}
-            {isStaff && viewMode !== 'member' && (!activeCircle || activeView === 'admin') && (
+                  3. !activeCircle || activeView === 'admin' ||
+                     pathname.startsWith('/admin') — the dual-role
+                     case. A user with both a staff_accounts row AND a
+                     circle_manager membership (e.g. the seeded
+                     tye.olmsted@oakraa.com from migration 018) gets
+                     ViewContext perspectives [family, admin,
+                     homeowner]. When they're "wearing the member
+                     hat" (family or homeowner perspective on a
+                     member-facing page) we hide the founder tools.
+                     But when they've physically navigated to the
+                     founder area (URL starts with /admin) we always
+                     show the menu, regardless of perspective —
+                     otherwise the Field-Mode "Switch to Admin"
+                     shortcut lands them at /admin/crm with no way
+                     to navigate the founder pages, and the
+                     view-switcher pill flip → /admin can land in a
+                     weird intermediate state where the perspective
+                     hasn't yet propagated. URL is the ground truth.
+                     A pure staff user with no circle membership has
+                     activeCircle = null and always sees the nav. */}
+            {isStaff && viewMode !== 'member' && (
+              !activeCircle ||
+              activeView === 'admin' ||
+              location.pathname.startsWith('/admin')
+            ) && (
               <div className="admin-nav-section">
                 <button
                   type="button"
