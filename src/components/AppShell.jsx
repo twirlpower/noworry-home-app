@@ -13,8 +13,32 @@ import ConsentBanner from './ConsentBanner'
 const VIEW_TIP_KEY = 'noworry:viewSwitcherSeen'
 import { getHomeDisplayName } from '../utils/homeDisplayName'
 
-const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
-const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
+// Phase 3d — Mode model. A staff user has up to three top-level
+// "modes" they move between:
+//   - Family    — the regular member-side AppShell (NAV_BY_VIEW)
+//   - Admin     — the staff founder area (/admin/crm, /admin/heatmap…)
+//   - Field     — the field-tech app (/tech/* — separate shell)
+// Pure circle_managers only have Family. Pure staff (no circle) only
+// have Admin (+ Field if hometech). Dual-role users see all three.
+//
+// "Are we currently in Admin mode?" is derived from the URL — any
+// /admin/<something> path is the founder area. /admin alone is the
+// circle-admin dashboard (member-side), so excluded. URL beats state
+// because there's no clean way to keep a separate flag in sync with
+// browser back/forward, deep links, or refresh.
+const FOUNDER_ADMIN_PATHS = [
+  '/admin/crm',
+  '/admin/heatmap',
+  '/admin/properties',
+  '/admin/maintenance',
+  '/admin/members',
+  '/admin/finance',
+  '/admin/reports',
+  '/admin/settings',
+]
+function isFounderAdminPath(pathname) {
+  return FOUNDER_ADMIN_PATHS.some((p) => pathname.startsWith(p))
+}
 
 // Per-view sidebar nav. The dashboard link diverges by view (Homeowner
 // → /home, Family → /family, Admin → /admin); the coordination tools
@@ -67,7 +91,7 @@ const NAV_BY_VIEW = {
 export default function AppShell() {
   const { person, signOut } = useAuth()
   const { circles, activeCircle, switchCircle } = useCircle()
-  const { isStaff, isOwner, loading: staffLoading } = useStaffRole()
+  const { isStaff, isOwner } = useStaffRole()
   const { isHomeTech } = useHomeTechRole()
   // StaffModeContext drives the orthogonal admin↔tech shell toggle.
   const { setStaffMode } = useStaffMode()
@@ -80,66 +104,33 @@ export default function AppShell() {
   })
   const navigate = useNavigate()
   const location = useLocation()
+  const inAdminMode = isFounderAdminPath(location.pathname)
 
-  // Staff can temporarily flip into "View as Member" mode to dogfood the
-  // member experience. localStorage is the source of truth; viewMode mirrors
-  // it as React state so the redirect effect re-runs when it changes and
-  // the banner can render conditionally.
-  const [viewMode, setViewMode] = useState(() => {
-    try {
-      return localStorage.getItem(MEMBER_VIEW_KEY) === 'member' ? 'member' : 'admin'
-    } catch {
-      return 'admin'
-    }
-  })
-
-  function enterMemberView() {
-    try { localStorage.setItem(MEMBER_VIEW_KEY, 'member') } catch { /* ignore */ }
-    setViewMode('member')
-    navigate('/dashboard')
-  }
-  function exitMemberView() {
-    try { localStorage.setItem(MEMBER_VIEW_KEY, 'admin') } catch { /* ignore */ }
-    setViewMode('admin')
+  function switchToAdmin() {
     navigate('/admin/crm')
   }
-
-  // Defense-in-depth: even though RootRedirect routes staff to /admin/crm,
-  // a staff member could still reach a member page via a bookmark, browser
-  // back, or pasted URL. Bounce them back to admin. Wait on staffLoading
-  // so we don't redirect during the initial Supabase lookup. Skip when:
-  //   - the staff user has opted into the legacy member view, OR
-  //   - the ViewContext perspective is family or homeowner (Phase 3 —
-  //     dual-role staff users with a circle membership can opt into
-  //     the family/homeowner surface from the new view switcher).
-  useEffect(() => {
-    if (staffLoading) return
-    if (!isStaff) return
-    if (viewMode === 'member') return
-    if (activeView === 'family' || activeView === 'homeowner') return
-    if (!location.pathname.startsWith('/admin')) {
-      navigate('/admin/crm', { replace: true })
-    }
-  }, [isStaff, staffLoading, viewMode, activeView, location.pathname, navigate])
-
-  // localStorage read is synchronous and cheap; lazy init keeps it out of an effect.
-  const [adminOpen, setAdminOpen] = useState(() => {
-    try {
-      return localStorage.getItem(ADMIN_NAV_OPEN_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
+  function switchToFamily() {
+    // /dashboard is the alias that ViewRouter resolves to the active
+    // view's default path (/home / /family / /admin). Picks up the
+    // homeowner's view preference automatically.
+    navigate('/dashboard')
+  }
+  function switchToField() {
+    setStaffMode('tech')
+    navigate('/tech/homes')
+  }
 
   // Mobile drawer state. The whole nav moves into a slide-out drawer
-  // below 768px so an expanded staff sub-nav no longer pushes the main
-  // content off-screen.
+  // below 768px.
   //
   // Close UX:
   //   * Hamburger button → toggles (sets state directly).
+  //   * In-drawer ✕ close button → closes (sets state directly).
   //   * Overlay backdrop → closes (sets state in onClick).
-  //   * Any link or button inside the drawer (except the ADMIN ▾
-  //     collapse toggle) → closes via the drawer's onClick delegate.
+  //   * Any link or button inside the drawer → closes via the
+  //     drawer's onClick delegate (no exceptions — every interactive
+  //     element in the drawer either navigates or switches mode,
+  //     and both warrant collapsing the drawer afterward).
   //   * Escape key → closes, via a window keydown listener (which the
   //     react-hooks ruleset is happy with — setState inside a callback,
   //     not the effect body).
@@ -153,22 +144,7 @@ export default function AppShell() {
   function handleDrawerClick(e) {
     const hit = e.target.closest('a, button')
     if (!hit) return
-    // The ADMIN ▾ button toggles its own sub-nav inside the drawer;
-    // don't collapse the whole drawer when the user expands it.
-    if (hit.classList.contains('admin-nav-toggle')) return
     setDrawerOpen(false)
-  }
-
-  function toggleAdmin() {
-    setAdminOpen((prev) => {
-      const next = !prev
-      try {
-        localStorage.setItem(ADMIN_NAV_OPEN_KEY, next ? '1' : '0')
-      } catch {
-        // ignore
-      }
-      return next
-    })
   }
 
   async function handleSignOut() {
@@ -222,16 +198,7 @@ export default function AppShell() {
           <span aria-hidden="true">✕</span>
         </button>
 
-        {isStaff && viewMode === 'member' && (
-          <div className="admin-mode-banner" role="status">
-            <span>🔧 Admin Mode</span>
-            <button type="button" onClick={exitMemberView}>
-              Back to Admin →
-            </button>
-          </div>
-        )}
-
-        {circles.length > 1 && (
+        {circles.length > 1 && !inAdminMode && (
           <div className="circle-switcher">
             <label htmlFor="circle-switcher" className="sr-only">Switch home circle</label>
             <select
@@ -253,7 +220,7 @@ export default function AppShell() {
           </div>
         )}
 
-        {views.length > 1 && (
+        {views.length > 1 && !inAdminMode && (
           <div className="view-switcher" aria-label="Switch view">
             <p className="view-switcher-label">View</p>
             <div className="view-switcher-pills">
@@ -292,123 +259,75 @@ export default function AppShell() {
           </div>
         )}
 
-        {(activeCircle || isStaff) && (
+        {/* Main nav body. Branches on inAdminMode (URL is the source
+            of truth — /admin/crm-like paths are founder area; every
+            other path is the member side). In admin mode we render
+            the founder admin items inline (no collapsible) so there's
+            nothing to hunt for. On the member side we render the
+            per-perspective nav from NAV_BY_VIEW. */}
+        {inAdminMode ? (
           <div className="app-nav-links">
-            {activeCircle && (
-              <>
-                {(NAV_BY_VIEW[activeView] || NAV_BY_VIEW.family).map((item) => (
-                  <NavLink key={item.to} to={item.to} className="nav-link">
-                    {item.label}
-                  </NavLink>
-                ))}
-              </>
+            <NavLink to="/admin/crm" className="nav-link">CRM</NavLink>
+            <NavLink to="/admin/heatmap" className="nav-link">Member Map</NavLink>
+            {isOwner && (
+              <NavLink to="/admin/properties" className="nav-link">Properties</NavLink>
             )}
-
-            {/* Staff sub-nav: cross-circle founder/operations tools (CRM,
-                Member Map, Properties, Finance, Reports). Four layered
-                gates so the right surface shows for each kind of user:
-                  1. isStaff — truthy only when staff_accounts has an
-                     active row for this user_id. A pure circle_manager
-                     with no staff_accounts row fails this and never
-                     sees any of the section.
-                  2. viewMode !== 'member' — the legacy "View as Member"
-                     dogfood toggle (MEMBER_VIEW_KEY) gives a clean
-                     member-only experience.
-                  3. !activeCircle || activeView === 'admin' ||
-                     pathname.startsWith('/admin') — the dual-role
-                     case. A user with both a staff_accounts row AND a
-                     circle_manager membership (e.g. the seeded
-                     tye.olmsted@oakraa.com from migration 018) gets
-                     ViewContext perspectives [family, admin,
-                     homeowner]. When they're "wearing the member
-                     hat" (family or homeowner perspective on a
-                     member-facing page) we hide the founder tools.
-                     But when they've physically navigated to the
-                     founder area (URL starts with /admin) we always
-                     show the menu, regardless of perspective —
-                     otherwise the Field-Mode "Switch to Admin"
-                     shortcut lands them at /admin/crm with no way
-                     to navigate the founder pages, and the
-                     view-switcher pill flip → /admin can land in a
-                     weird intermediate state where the perspective
-                     hasn't yet propagated. URL is the ground truth.
-                     A pure staff user with no circle membership has
-                     activeCircle = null and always sees the nav. */}
-            {isStaff && viewMode !== 'member' && (
-              !activeCircle ||
-              activeView === 'admin' ||
-              location.pathname.startsWith('/admin')
-            ) && (
-              <div className="admin-nav-section">
-                <button
-                  type="button"
-                  className="admin-nav-toggle"
-                  onClick={toggleAdmin}
-                  aria-expanded={adminOpen}
-                >
-                  <span>ADMIN</span>
-                  <span className="admin-nav-caret" aria-hidden="true">
-                    {adminOpen ? '▾' : '▸'}
-                  </span>
-                </button>
-                {adminOpen && (
-                  <div className="admin-nav-items">
-                    <NavLink to="/admin/crm" className="nav-link">
-                      <span aria-hidden="true">🗂</span> CRM
-                    </NavLink>
-                    <NavLink to="/admin/heatmap" className="nav-link">
-                      <span aria-hidden="true">🗺</span> Member Map
-                    </NavLink>
-                    {isOwner && (
-                      <NavLink to="/admin/properties" className="nav-link">
-                        <span aria-hidden="true">🏘</span> Properties
-                      </NavLink>
-                    )}
-                    {isOwner && (
-                      <NavLink to="/admin/maintenance" className="nav-link">
-                        <span aria-hidden="true">🔧</span> Maintenance
-                      </NavLink>
-                    )}
-                    <NavLink to="/admin/members" className="nav-link">
-                      <span aria-hidden="true">👥</span> Members
-                    </NavLink>
-                    {isOwner && (
-                      <NavLink to="/admin/finance" className="nav-link">
-                        <span aria-hidden="true">💰</span> Finance
-                      </NavLink>
-                    )}
-                    {isOwner && (
-                      <NavLink to="/admin/reports" className="nav-link">
-                        <span aria-hidden="true">📊</span> Reports
-                      </NavLink>
-                    )}
-                    {isOwner && (
-                      <NavLink to="/admin/settings" className="nav-link">
-                        <span aria-hidden="true">⚙️</span> Admin Settings
-                      </NavLink>
-                    )}
-                    <button
-                      type="button"
-                      className="view-as-member-link"
-                      onClick={enterMemberView}
-                    >
-                      <span aria-hidden="true">👤</span> View as Member →
-                    </button>
-                  </div>
-                )}
-              </div>
+            {isOwner && (
+              <NavLink to="/admin/maintenance" className="nav-link">Maintenance</NavLink>
+            )}
+            <NavLink to="/admin/members" className="nav-link">Members</NavLink>
+            {isOwner && (
+              <NavLink to="/admin/finance" className="nav-link">Finance</NavLink>
+            )}
+            {isOwner && (
+              <NavLink to="/admin/reports" className="nav-link">Reports</NavLink>
+            )}
+            {isOwner && (
+              <NavLink to="/admin/settings" className="nav-link">Admin Settings</NavLink>
             )}
           </div>
+        ) : (
+          activeCircle && (
+            <div className="app-nav-links">
+              {(NAV_BY_VIEW[activeView] || NAV_BY_VIEW.family).map((item) => (
+                <NavLink key={item.to} to={item.to} className="nav-link">
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          )
         )}
 
+        {/* Mode switcher — bottom of drawer. Visible buttons for the
+            modes the user isn't currently in, so the toggle is one
+            tap. Family is only offered to staff (otherwise members
+            are already in their only mode); Admin only to staff;
+            Field only to home techs. Pure staff with no circle
+            don't see "Switch to Family" because they have nowhere
+            to go on the member side. */}
+        {inAdminMode && isStaff && activeCircle && (
+          <button
+            type="button"
+            className="mode-switch-link"
+            onClick={switchToFamily}
+          >
+            <span aria-hidden="true">👨‍👩‍👧</span> Switch to Family →
+          </button>
+        )}
+        {!inAdminMode && isStaff && (
+          <button
+            type="button"
+            className="mode-switch-link"
+            onClick={switchToAdmin}
+          >
+            <span aria-hidden="true">🗂</span> Switch to Admin →
+          </button>
+        )}
         {isHomeTech && (
           <button
             type="button"
-            className="switch-to-field-link"
-            onClick={() => {
-              setStaffMode('tech')
-              navigate('/tech/homes')
-            }}
+            className="mode-switch-link"
+            onClick={switchToField}
           >
             <span aria-hidden="true">🔧</span> Switch to Field Mode →
           </button>

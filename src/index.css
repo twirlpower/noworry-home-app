@@ -3147,8 +3147,12 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   .admin-kpi-grid { grid-template-columns: 1fr; }
 }
 
-/* ── SWITCH TO FIELD MODE LINK (AppShell, dual-role users) ──────────────── */
-.switch-to-field-link {
+/* ── MODE SWITCH BUTTONS (AppShell — Family / Admin / Field) ────────────
+   Shared style for all three top-level mode-switch buttons that sit at
+   the bottom of the drawer above the user info. Same vocabulary so
+   the buttons feel like a matched set; the icon glyph in the JSX is
+   what distinguishes them. */
+.mode-switch-link {
   display: block;
   width: calc(100% - 1.6rem);
   margin: 0.5rem 0.8rem 0;
@@ -3164,7 +3168,7 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   text-align: center;
   transition: background 0.15s;
 }
-.switch-to-field-link:hover { background: var(--muted-teal); color: var(--white); }
+.mode-switch-link:hover { background: var(--muted-teal); color: var(--white); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    HOME TECH FIELD APP — mobile-first, all .tech-* prefixed
