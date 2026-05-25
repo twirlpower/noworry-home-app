@@ -117,6 +117,34 @@ export default function AppShell() {
     }
   })
 
+  // Mobile drawer state. The whole nav moves into a slide-out drawer
+  // below 768px so an expanded staff sub-nav no longer pushes the main
+  // content off-screen.
+  //
+  // Close UX:
+  //   * Hamburger button → toggles (sets state directly).
+  //   * Overlay backdrop → closes (sets state in onClick).
+  //   * Any link or button inside the drawer (except the ADMIN ▾
+  //     collapse toggle) → closes via the drawer's onClick delegate.
+  //   * Escape key → closes, via a window keydown listener (which the
+  //     react-hooks ruleset is happy with — setState inside a callback,
+  //     not the effect body).
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  useEffect(() => {
+    if (!drawerOpen) return
+    function onKey(e) { if (e.key === 'Escape') setDrawerOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawerOpen])
+  function handleDrawerClick(e) {
+    const hit = e.target.closest('a, button')
+    if (!hit) return
+    // The ADMIN ▾ button toggles its own sub-nav inside the drawer;
+    // don't collapse the whole drawer when the user expands it.
+    if (hit.classList.contains('admin-nav-toggle')) return
+    setDrawerOpen(false)
+  }
+
   function toggleAdmin() {
     setAdminOpen((prev) => {
       const next = !prev
@@ -138,6 +166,33 @@ export default function AppShell() {
     <div className="app-shell">
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <nav className="app-nav" aria-label="Primary">
+        {/* Top bar — brand always; hamburger renders on mobile via CSS.
+            On desktop the sidebar is permanently open, so the hamburger
+            is display:none and clicking does nothing. */}
+        <div className="app-nav-top">
+          <div className="app-nav-brand">
+            <img src="/images/logo.png" alt="NoWorry Home" className="app-nav-logo" />
+          </div>
+          <button
+            type="button"
+            className="nav-hamburger"
+            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={drawerOpen}
+            aria-controls="primary-nav-drawer"
+            onClick={() => setDrawerOpen((o) => !o)}
+          >
+            <span aria-hidden="true">{drawerOpen ? '✕' : '☰'}</span>
+          </button>
+        </div>
+
+        {/* Drawer wraps every interactive piece of the nav. On desktop
+            this is the rest of the sidebar; on mobile it slides in from
+            the right when the hamburger toggles. */}
+        <div
+          id="primary-nav-drawer"
+          className={`nav-drawer ${drawerOpen ? 'nav-drawer-open' : ''}`}
+          onClick={handleDrawerClick}
+        >
         {isStaff && viewMode === 'member' && (
           <div className="admin-mode-banner" role="status">
             <span>🔧 Admin Mode</span>
@@ -146,10 +201,6 @@ export default function AppShell() {
             </button>
           </div>
         )}
-
-        <div className="app-nav-brand">
-          <img src="/images/logo.png" alt="NoWorry Home" className="app-nav-logo" />
-        </div>
 
         {circles.length > 1 && (
           <div className="circle-switcher">
@@ -316,6 +367,18 @@ export default function AppShell() {
             Sign Out
           </button>
         </div>
+        </div> {/* /.nav-drawer */}
+
+        {/* Backdrop — only renders on mobile when drawer is open.
+            Click anywhere outside the drawer to close. */}
+        {drawerOpen && (
+          <button
+            type="button"
+            className="nav-overlay"
+            aria-label="Close menu"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
       </nav>
 
       <main className="app-main" id="main-content">
