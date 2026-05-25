@@ -1,5 +1,7 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { useAuth } from './AuthContext'
 import { useCircle } from './CircleContext'
+import { supabase } from '../lib/supabase'
 import { availableViews } from '../utils/availableViews'
 import { track } from '../lib/analytics'
 
@@ -8,6 +10,11 @@ import { track } from '../lib/analytics'
 // distinct from the user's role in the database. A user with multiple
 // available views picks one via the AppShell switcher; the choice
 // persists per circle in localStorage.
+//
+// Phase 3c adds homeownerViewMode — orthogonal to activeView. When
+// activeView === 'homeowner', this picks between the Simple and
+// Standard dashboard layouts. Persisted on persons (not localStorage)
+// because it's a per-person preference, not per-device.
 //
 // Naming: independent of StaffModeContext, which controls the
 // orthogonal staff↔tech shell toggle. A staff user in tech mode is
@@ -21,6 +28,7 @@ function keyFor(circleId) {
 }
 
 export function ViewProvider({ children }) {
+  const { person } = useAuth()
   const { activeCircle, membership } = useCircle()
   const circleId = activeCircle?.id ?? null
   const role = membership?.role ?? null
@@ -38,6 +46,30 @@ export function ViewProvider({ children }) {
       ? explicit
       : initialView(circleId, views)
 
+  // Phase 3c — homeowner view density. Loaded lazily the first time
+  // the user lands on the homeowner view (cheap one-column read).
+  // loadedFor gates stale data the same way useStaffRole does.
+  const [homeownerViewMode, setHomeownerViewModeState] = useState('standard')
+  const [loadedFor, setLoadedFor] = useState(null)
+
+  useEffect(() => {
+    if (activeView !== 'homeowner') return
+    if (!person?.id) return
+    if (loadedFor === person.id) return
+    let cancelled = false
+    supabase
+      .from('persons')
+      .select('homeowner_view_preference')
+      .eq('id', person.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        setHomeownerViewModeState(data?.homeowner_view_preference ?? 'standard')
+        setLoadedFor(person.id)
+      })
+    return () => { cancelled = true }
+  }, [activeView, person?.id, loadedFor])
+
   function switchView(next) {
     if (!views.includes(next)) return
     if (circleId) {
@@ -54,12 +86,33 @@ export function ViewProvider({ children }) {
     }
   }
 
+  // Optimistic toggle for the Simple ↔ Standard dashboard switch.
+  // Updates local state first so the UI flips instantly, then writes
+  // through to persons.homeowner_view_preference. Failure is logged
+  // but not surfaced — worst case the toggle reverts on next reload,
+  // which is gentler than blocking the UI on a network blip.
+  async function setHomeownerViewMode(next) {
+    if (next !== 'simple' && next !== 'standard') return
+    if (!person?.id) return
+    setHomeownerViewModeState(next)
+    try {
+      await supabase
+        .from('persons')
+        .update({ homeowner_view_preference: next })
+        .eq('id', person.id)
+    } catch {
+      /* swallow — see comment above */
+    }
+  }
+
   return (
     <ViewContext.Provider
       value={{
         activeView,
         views,
         switchView,
+        homeownerViewMode,
+        setHomeownerViewMode,
         // Helpers most consumers want:
         isHomeowner: activeView === 'homeowner',
         isFamily:    activeView === 'family',
@@ -92,6 +145,8 @@ export function useView() {
       activeView: 'family',
       views: ['family'],
       switchView: () => {},
+      homeownerViewMode: 'standard',
+      setHomeownerViewMode: () => {},
       isHomeowner: false,
       isFamily: true,
       isAdmin: false,

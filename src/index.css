@@ -2015,6 +2015,35 @@ textarea.form-input {
     font-size: 1rem;
   }
 
+  /* Staff sub-nav inside the drawer. The desktop section uses tiny
+     0.72rem / 0.82rem type designed for a 260px sidebar — on a phone
+     those targets land below the 44px tap-area floor and feel cramped
+     next to the 48px member nav-links above them. Bump padding, font,
+     and inter-item gap so the founder tools (CRM, Member Map,
+     Properties, Maintenance, Members, Finance, Reports, Admin
+     Settings, View as Member) are tappable and breathe properly. */
+  .nav-drawer .admin-nav-section {
+    margin-top: 0.8rem;
+    padding-top: 0.6rem;
+  }
+  .nav-drawer .admin-nav-toggle {
+    min-height: 44px;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.78rem;
+  }
+  .nav-drawer .admin-nav-items {
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+  }
+  .nav-drawer .view-as-member-link {
+    min-height: 48px;
+    padding: 0.8rem;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+  }
+
   /* Backdrop — covers the screen behind the drawer; tap to close. */
   .nav-overlay {
     position: fixed;
@@ -4300,11 +4329,35 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   color: var(--deep);
   line-height: 1;
 }
-.homeowner-hero-phrase {
-  font-size: 20px;
-  font-weight: 600;
+/* Warm interpretation sentence under the score. ≥20px per the
+   board's "Fix Simple" spec; --text is darker than #555. */
+.homeowner-hero-message {
+  font-size: 22px;
+  font-weight: 500;
   color: var(--text);
-  margin-top: 0.9rem;
+  margin-top: 1rem;
+  line-height: 1.45;
+}
+
+/* "Your family is helping" line — the most important emotional
+   signal. Sits between the hero and the coming-up card so it reads
+   as a continuation of the score. Centered, ≥18px, --text for
+   contrast. */
+.homeowner-family-help {
+  text-align: center;
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.homeowner-family-help-icon {
+  font-size: 22px;
+  line-height: 1;
 }
 
 .homeowner-coming-up {
@@ -4314,46 +4367,285 @@ td.vj-margin-good { color: var(--deep); font-weight: 700; }
   padding: 1.6rem 1.8rem;
   margin-bottom: 2rem;
 }
+/* Ownership line: date + " · Sarah has this scheduled" (or "No one
+   assigned yet" when nothing is set). 18px to match the body floor;
+   --text keeps contrast above #555. */
 .homeowner-coming-when {
-  font-size: 17px;
+  font-size: 18px;
   color: var(--text);
   line-height: 1.5;
   margin-top: 0.3rem;
 }
-.homeowner-coming-helper {
-  font-size: 16px;
-  color: var(--muted);
-  margin-top: 0.8rem;
-  font-style: italic;
+
+/* Warm empty state when there's no upcoming maintenance item.
+   Mirrors the "good" hero palette so a quiet home reads as a green
+   light, not a blank card. */
+.homeowner-empty {
+  background: #E1F5EE;
+  border: 1px solid var(--muted-teal);
+  border-radius: 14px;
+  padding: 1.8rem 1.6rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.homeowner-empty-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 0.6rem;
+}
+.homeowner-empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--deep);
+  margin-bottom: 0.3rem;
+}
+.homeowner-empty-sub {
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.5;
 }
 
-.homeowner-actions {
-  display: flex;
-  justify-content: center;
-  margin: 1.2rem 0 2rem;
+/* ── Phase 3c — Standard homeowner view ────────────────────────────────── */
+/* Long-form date subtitle under the welcome line. --muted is darker
+   than the #555 board floor; line-height keeps headers from running
+   into each other on small screens. */
+.homeowner-std-date {
+  font-size: 18px;
+  color: var(--muted);
+  margin: -0.2rem 0 1.4rem;
+  line-height: 1.4;
 }
-.homeowner-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 56px;
-  padding: 0 1.6rem;
-  background: var(--teal);
-  color: var(--white);
-  border-radius: var(--radius-sm);
-  font-size: 17px;
+
+/* Each panel (Coming up / Home safety / Family activity) is a card
+   with a clear header and roomy padding — same vocabulary as the
+   coming-up card so the page reads as one document. */
+.homeowner-std-section {
+  background: var(--white);
+  border: 1px solid var(--cool);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.6rem;
+}
+.homeowner-std-h2 {
+  font-size: 20px;
   font-weight: 700;
+  color: var(--deep);
+  margin: 0 0 0.8rem;
+  line-height: 1.3;
+}
+.homeowner-std-line {
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0.3rem 0;
+}
+.homeowner-std-empty {
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+.homeowner-std-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.homeowner-std-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--cool);
+}
+.homeowner-std-list-item:last-child { border-bottom: none; }
+.homeowner-std-item-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--deep);
+  line-height: 1.4;
+}
+.homeowner-std-item-meta {
+  font-size: 17px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.homeowner-std-link {
+  display: inline-block;
+  margin-top: 0.7rem;
+  min-height: 44px;
+  padding: 0.6rem 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--deep);
   text-decoration: none;
 }
-.homeowner-cta:hover { background: var(--dark-teal); }
+.homeowner-std-link:hover { text-decoration: underline; }
 
-.homeowner-helper-note {
+/* Bottom-of-page density toggle. Quiet styling — not a primary
+   action — but still a real tap target (44px) so it's reachable on
+   a phone without accidental taps on the section above. */
+.homeowner-density-toggle {
   text-align: center;
-  font-size: 16px;
-  color: var(--muted);
-  margin-top: 2rem;
-  font-style: italic;
+  margin-top: 2.4rem;
 }
+.homeowner-density-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 16px;
+  min-height: 44px;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.homeowner-density-toggle-btn:hover { color: var(--deep); }
+
+/* ── Phase 3c — Onboarding preferences step ────────────────────────────── */
+.onboarding-section {
+  margin-bottom: 1.6rem;
+}
+.onboarding-section-h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--deep);
+  margin: 0 0 0.4rem;
+  line-height: 1.3;
+}
+.onboarding-optional {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.onboarding-helper {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.view-preference-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.view-preference-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 64px;
+  padding: 1rem 1.1rem;
+  text-align: left;
+  background: var(--white);
+  border: 2px solid var(--cool);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color 0.15s, background 0.15s;
+}
+.view-preference-option:hover {
+  border-color: var(--muted-teal);
+}
+.view-preference-option.on {
+  background: #EAF3DE;
+  border-color: #3B6D11;
+}
+.view-preference-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--deep);
+}
+.view-preference-desc {
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.welcome-message-textarea {
+  width: 100%;
+  min-height: 130px;
+  padding: 0.9rem 1rem;
+  font-size: 17px;
+  line-height: 1.55;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--white);
+  border: 2px solid var(--cool);
+  border-radius: 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.welcome-message-textarea:focus {
+  outline: none;
+  border-color: var(--muted-teal);
+}
+.welcome-message-counter {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: right;
+  margin: 0.3rem 0 0;
+}
+
+/* ── Phase 3c — WelcomeMessage overlay ─────────────────────────────────── */
+.welcome-message-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 30, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1400;
+}
+.welcome-message-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 2.4rem 2rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(10, 74, 48, 0.25);
+}
+.welcome-message-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+.welcome-message-eyebrow {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.6rem;
+}
+.welcome-message-body {
+  font-size: 20px;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+.welcome-message-cta {
+  width: 100%;
+  min-height: 56px;
+  padding: 1rem 1.5rem;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--deep);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.welcome-message-cta:hover { background: #073B26; }
+.welcome-message-cta:disabled { opacity: 0.6; cursor: default; }
 
 /* ── PWA install prompt ─────────────────────────────────────────────────── */
 .install-prompt {

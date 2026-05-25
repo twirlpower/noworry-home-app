@@ -7,6 +7,14 @@ import { normalizeAddress } from '../lib/normalizeAddress'
 import { RELATIONSHIP_OPTIONS } from '../utils/homeDisplayName'
 import { track } from '../lib/analytics'
 
+// Phase 3c — relationship_kinds where the homeowner is being set up by
+// someone else who knows the homeowner prefers minimal complexity. The
+// default homeowner_view_preference flips to 'simple' for these; the
+// adult-child author can still override per the preference picker.
+// Spouse + professional + other land on 'standard' (the column default)
+// because the homeowner is more likely to want the full picture.
+const SIMPLE_RELATIONSHIPS = ['adult_child', 'grandchild', 'sibling']
+
 export default function Onboarding() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -42,6 +50,17 @@ export default function Onboarding() {
   // — we now send null there since the picker value lives on
   // circle_memberships.relationship_kind instead).
   const [relationshipKind, setRelationshipKind] = useState('adult_child')
+
+  // Phase 3c — Path B authoring of the homeowner's first experience.
+  //   homeownerViewPreference: 'standard' | 'simple' | null
+  //     null = "use the relationship default" (adult_child / grandchild /
+  //     sibling → simple, everyone else → standard). Explicit picks
+  //     override the relationship default.
+  //   welcomeMessage: optional note the homeowner sees the first time
+  //     they open the app. Capped at 500 chars by both the textarea
+  //     and the table's CHECK constraint.
+  const [homeownerViewPreference, setHomeownerViewPreference] = useState(null)
+  const [welcomeMessage, setWelcomeMessage] = useState('')
 
   // Home profile
   const [address, setAddress] = useState('')
@@ -227,6 +246,59 @@ export default function Onboarding() {
       }
     }
 
+    // Phase 3c — Path B: author the homeowner's first experience.
+    //   1. Resolve the homeowner's person_id (setup_home_circle made a
+    //      proxy persons row for them; we look it up by walking the
+    //      circle's home_owner membership).
+    //   2. Compute the effective view preference and update the
+    //      homeowner's row when it differs from the column default
+    //      ('standard'). Path A is always self → no write needed; the
+    //      DB default keeps them on Standard.
+    //   3. Insert the welcome message if the author wrote one.
+    // Both writes are best-effort: failure here doesn't undo the
+    // already-created circle.
+    if (circleId && setupType === 'other') {
+      try {
+        const { data: ownerRow } = await supabase
+          .from('circle_memberships')
+          .select('person_id')
+          .eq('circle_id', circleId)
+          .eq('role', 'home_owner')
+          .eq('status', 'active')
+          .maybeSingle()
+        const homeownerPersonId = ownerRow?.person_id
+        if (homeownerPersonId) {
+          // Effective preference: explicit pick wins; otherwise the
+          // SIMPLE_RELATIONSHIPS default applies; otherwise standard.
+          let effectivePref = 'standard'
+          if (homeownerViewPreference === 'simple' || homeownerViewPreference === 'standard') {
+            effectivePref = homeownerViewPreference
+          } else if (SIMPLE_RELATIONSHIPS.includes(relationshipKind)) {
+            effectivePref = 'simple'
+          }
+          if (effectivePref === 'simple') {
+            await supabase
+              .from('persons')
+              .update({ homeowner_view_preference: 'simple' })
+              .eq('id', homeownerPersonId)
+          }
+          const trimmedNote = welcomeMessage.trim()
+          if (trimmedNote) {
+            await supabase
+              .from('circle_welcome_messages')
+              .insert({
+                circle_id: circleId,
+                from_person_id: person.id,
+                to_person_id: homeownerPersonId,
+                message: trimmedNote.slice(0, 500),
+              })
+          }
+        }
+      } catch {
+        /* best-effort — non-fatal */
+      }
+    }
+
     // Best-effort: persist seed extras + the classification answers from
     // the new home-tier step. The bootstrap RPC's p_home contract doesn't
     // take these fields, so we patch them in via a follow-up update on
@@ -285,9 +357,22 @@ export default function Onboarding() {
   }
 
   async function finishOnboarding() {
+    // Effective homeowner view (same logic as the post-circle write
+    // above) reported for Phase 3c analytics — lets us see which
+    // relationship_kinds actually land where.
+    let effectivePref = 'standard'
+    if (setupType === 'other') {
+      if (homeownerViewPreference === 'simple' || homeownerViewPreference === 'standard') {
+        effectivePref = homeownerViewPreference
+      } else if (SIMPLE_RELATIONSHIPS.includes(relationshipKind)) {
+        effectivePref = 'simple'
+      }
+    }
     track('onboarding_completed', {
       path_taken: setupType === 'self' ? 'A' : 'B',
       relationship_kind: setupType === 'other' ? relationshipKind : 'self',
+      homeowner_view_default: effectivePref,
+      welcome_message_set: setupType === 'other' && welcomeMessage.trim().length > 0,
       time_to_complete_seconds: Math.round((Date.now() - onboardingStartedAt.current) / 1000),
     })
     await reloadCircles()
@@ -509,10 +594,101 @@ export default function Onboarding() {
 
           <button
             className="btn-primary-full"
-            onClick={() => setStep('home')}
+            onClick={() => setStep('preferences')}
             disabled={!ownerFirst || !ownerLast || !relationshipKind}
           >
-            Continue to Home Profile
+            Continue →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Step: Path B authoring — view default + welcome note. Only on
+  // setupType='other'; Path A flows straight from setup to 'home'.
+  // The view picker shows only for the relationships where the
+  // SIMPLE default actually flips (adult_child / grandchild /
+  // sibling); for spouse / professional / other we skip it because
+  // 'standard' is the default and there's nothing to override yet.
+  // The welcome message renders for every Path B path — anyone
+  // setting up for someone else can leave them a note.
+  if (step === 'preferences') {
+    const showViewPicker = SIMPLE_RELATIONSHIPS.includes(relationshipKind)
+    const firstName = ownerFirst.trim() || 'them'
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <h1>A few things to set up for {firstName}</h1>
+          <p className="auth-subtitle">
+            You can change any of this later, and so can {firstName}.
+          </p>
+
+          {showViewPicker && (
+            <div className="onboarding-section">
+              <h2 className="onboarding-section-h2">
+                How would {firstName} like to see their home?
+              </h2>
+              <div className="view-preference-picker">
+                <button
+                  type="button"
+                  className={`view-preference-option ${homeownerViewPreference === 'standard' ? 'on' : ''}`}
+                  onClick={() => setHomeownerViewPreference('standard')}
+                  aria-pressed={homeownerViewPreference === 'standard'}
+                >
+                  <span className="view-preference-title">The full picture</span>
+                  <span className="view-preference-desc">
+                    Maintenance calendar, safety checklist, family updates — everything
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={`view-preference-option ${homeownerViewPreference === 'simple' || (homeownerViewPreference === null) ? 'on' : ''}`}
+                  onClick={() => setHomeownerViewPreference('simple')}
+                  aria-pressed={homeownerViewPreference === 'simple' || homeownerViewPreference === null}
+                >
+                  <span className="view-preference-title">Keep it simple</span>
+                  <span className="view-preference-desc">
+                    Just the health score and what&apos;s coming up — easy to glance at
+                  </span>
+                </button>
+              </div>
+              <p className="onboarding-helper">
+                We default to <strong>simple</strong> when you&apos;re setting up for a parent or
+                relative — most people prefer it. Pick <strong>full picture</strong> if {firstName} likes detail.
+              </p>
+            </div>
+          )}
+
+          <div className="onboarding-section">
+            <h2 className="onboarding-section-h2">
+              Write a note for {firstName}{' '}
+              <span className="onboarding-optional">(optional)</span>
+            </h2>
+            <p className="onboarding-helper">
+              They&apos;ll see this the first time they open the app.
+            </p>
+            <textarea
+              className="welcome-message-textarea"
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value.slice(0, 500))}
+              placeholder={`Hi ${firstName}, I set this up so you don't have to worry about the house. Everything is being taken care of.`}
+              maxLength={500}
+              rows={5}
+            />
+            <p className="welcome-message-counter">
+              {welcomeMessage.length}/500
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="btn-primary-full"
+            onClick={() => setStep('home')}
+          >
+            Continue to Home Profile →
+          </button>
+          <button className="btn-back" onClick={() => setStep('homeowner')}>
+            ← Back
           </button>
         </div>
       </div>
@@ -778,7 +954,7 @@ export default function Onboarding() {
         </form>
 
         {setupType === 'other' && (
-          <button className="btn-back" onClick={() => setStep('homeowner')}>
+          <button className="btn-back" onClick={() => setStep('preferences')}>
             ← Back
           </button>
         )}
