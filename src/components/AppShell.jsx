@@ -16,15 +16,29 @@ import { getHomeDisplayName } from '../utils/homeDisplayName'
 const ADMIN_NAV_OPEN_KEY = 'noworry-admin-nav-open'
 const MEMBER_VIEW_KEY = 'nwh-staff-member-view'
 
-// Per-view sidebar nav. Homeowner sees a minimal set focused on the
-// home itself; family + admin both get the coordination tools, with
-// the dashboard link diverging (Family → /family, Admin → /admin).
-// Three components in three folders, not one component with conditionals.
+// Per-view sidebar nav. The dashboard link diverges by view (Homeowner
+// → /home, Family → /family, Admin → /admin); the coordination tools
+// (My Circle, Maintenance, Safety, Documents, Emergency Contacts) are
+// shared by all three. Tasks lives only in family + admin because the
+// label and copy on /tasks lean coordination-y ("assign", "track") —
+// out of register for the homeowner surface.
+//
+// Earlier the homeowner nav was deliberately minimal (Home, Home
+// Profile, Settings) on the theory that homeowners just want to know
+// the house is taken care of. Field-testing showed homeowners do want
+// to see what's coming up, who's in their circle, and what's been
+// done — the expanded nav gives them that without forcing the
+// coordination vocabulary.
 const NAV_BY_VIEW = {
   homeowner: [
-    { to: '/home',         label: 'Home' },
-    { to: '/home-profile', label: 'Home Profile' },
-    { to: '/settings',     label: 'Settings' },
+    { to: '/home',                label: 'Home' },
+    { to: '/circle',              label: 'My Circle' },
+    { to: '/maintenance',         label: 'Maintenance' },
+    { to: '/safety',              label: 'Safety' },
+    { to: '/documents',           label: 'Documents' },
+    { to: '/emergency-contacts',  label: 'Emergency Contacts' },
+    { to: '/home-profile',        label: 'Home Profile' },
+    { to: '/settings',            label: 'Settings' },
   ],
   family: [
     { to: '/family',              label: 'Dashboard' },

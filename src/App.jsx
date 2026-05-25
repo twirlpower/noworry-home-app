@@ -163,8 +163,15 @@ export default function App() {
               <Route path="homes" element={<TechHomes />} />
               <Route path="homes/:circleId" element={<TechHomes />} />
               <Route path="today" element={
-                <div style={{ padding: '2rem' }}>Today's schedule — coming in 19b</div>
+                <div style={{ padding: '2rem' }}>Today&apos;s schedule — coming in 19b</div>
               } />
+              {/* Bare /tech/assess and /tech/checklist (no circle picked
+                  yet) bounce to the Homes picker. Without these the
+                  bottom-nav Assess/Checklist tabs fell through to the
+                  top-level catch-all → /dashboard → /home, dropping
+                  field-mode users on the homeowner dashboard. */}
+              <Route path="assess" element={<Navigate to="/tech/homes" replace />} />
+              <Route path="checklist" element={<Navigate to="/tech/homes" replace />} />
               <Route path="assess/:circleId" element={<TechAssessment />} />
               <Route path="checklist/:circleId" element={<TechChecklist />} />
               <Route path="profile" element={<TechProfile />} />
