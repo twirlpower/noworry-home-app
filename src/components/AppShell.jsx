@@ -276,14 +276,28 @@ export default function AppShell() {
             )}
 
             {/* Staff sub-nav: cross-circle founder/operations tools (CRM,
-                Member Map, Properties, Finance, Reports). Gated on
-                isStaff (truthy only when staff_accounts has an active
-                row for this user_id). Hidden additionally whenever
-                viewMode === 'member' so the "View as Member" dogfood
-                path gives a true member-only experience. A pure
-                circle_manager with no staff_accounts row never sees
-                any of this. */}
-            {isStaff && viewMode !== 'member' && (
+                Member Map, Properties, Finance, Reports). Three layered
+                gates so the right surface shows for each kind of user:
+                  1. isStaff — truthy only when staff_accounts has an
+                     active row for this user_id. A pure circle_manager
+                     with no staff_accounts row fails this and never
+                     sees any of the section.
+                  2. viewMode !== 'member' — the legacy "View as Member"
+                     dogfood toggle (MEMBER_VIEW_KEY) gives a clean
+                     member-only experience.
+                  3. !activeCircle || activeView === 'admin' — the
+                     dual-role case. A user with both a staff_accounts
+                     row AND a circle_manager membership (e.g. the
+                     seeded tye.olmsted@oakraa.com from migration 018)
+                     gets ViewContext perspectives [family, admin,
+                     homeowner]. When they switch to the family or
+                     homeowner perspective they're explicitly "wearing
+                     the member hat" — hide the founder tools. A pure
+                     staff user with no circle membership has
+                     activeCircle = null and always sees the nav.
+                     Without this gate the dual-role user sees founder
+                     tools across every view, which was the leak. */}
+            {isStaff && viewMode !== 'member' && (!activeCircle || activeView === 'admin') && (
               <div className="admin-nav-section">
                 <button
                   type="button"

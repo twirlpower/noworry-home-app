@@ -2015,6 +2015,35 @@ textarea.form-input {
     font-size: 1rem;
   }
 
+  /* Staff sub-nav inside the drawer. The desktop section uses tiny
+     0.72rem / 0.82rem type designed for a 260px sidebar — on a phone
+     those targets land below the 44px tap-area floor and feel cramped
+     next to the 48px member nav-links above them. Bump padding, font,
+     and inter-item gap so the founder tools (CRM, Member Map,
+     Properties, Maintenance, Members, Finance, Reports, Admin
+     Settings, View as Member) are tappable and breathe properly. */
+  .nav-drawer .admin-nav-section {
+    margin-top: 0.8rem;
+    padding-top: 0.6rem;
+  }
+  .nav-drawer .admin-nav-toggle {
+    min-height: 44px;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.78rem;
+  }
+  .nav-drawer .admin-nav-items {
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+  }
+  .nav-drawer .view-as-member-link {
+    min-height: 48px;
+    padding: 0.8rem;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+  }
+
   /* Backdrop — covers the screen behind the drawer; tap to close. */
   .nav-overlay {
     position: fixed;
