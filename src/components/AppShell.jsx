@@ -207,6 +207,21 @@ export default function AppShell() {
           className={`nav-drawer ${drawerOpen ? 'nav-drawer-open' : ''}`}
           onClick={handleDrawerClick}
         >
+        {/* In-drawer close button. The hamburger at the top of the
+            page also flips to ✕ when the drawer is open, but it sits
+            behind the 320px drawer on mobile so it's effectively
+            invisible. This button gives the user a real, visible
+            target right where their eye lands when the drawer slides
+            in. Display:none on desktop (the existing media query). */}
+        <button
+          type="button"
+          className="nav-drawer-close"
+          aria-label="Close menu"
+          onClick={() => setDrawerOpen(false)}
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+
         {isStaff && viewMode === 'member' && (
           <div className="admin-mode-banner" role="status">
             <span>🔧 Admin Mode</span>
