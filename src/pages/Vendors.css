@@ -1,0 +1,31 @@
+/* Vendors page — reuses the generic contact-row + upgrade-card styles
+   from EmergencyContacts.css since they're shaped identically (labeled
+   card with name, contact lines, and an inline edit/delete action
+   column). The only Vendors-specific style here is the NoWorry Vetted
+   Vendors placeholder card.
+
+   TECH DEBT: the .ec-* prefix is misleading once the same styles are
+   reused from a second page. Rename to a neutral .contact-row /
+   .upgrade-card during the planned broader CSS pass (alongside the
+   dead-CSS cleanup follow-up). Holding off until then to avoid
+   churning EmergencyContacts.css in this PR. */
+
+@import './EmergencyContacts.css';
+
+.vendors-vetted {
+  margin-top: 2rem;
+}
+
+.vendors-vetted-card {
+  background: #3B6D11; /* Forest Teal per design tokens */
+  color: var(--white);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.vendors-vetted-card p {
+  margin: 0;
+  color: var(--white);
+}

@@ -23,6 +23,7 @@ import Circle from './pages/Circle'
 import Tasks from './pages/Tasks'
 import Documents from './pages/Documents'
 import EmergencyContacts from './pages/EmergencyContacts'
+import Vendors from './pages/Vendors'
 import Settings from './pages/Settings'
 import AdminCRM from './pages/admin/AdminCRM'
 import AdminSettings from './pages/admin/AdminSettings'
@@ -118,6 +119,7 @@ export default function App() {
               <Route path="safety" element={<Safety />} />
               <Route path="documents" element={<Documents />} />
               <Route path="emergency-contacts" element={<EmergencyContacts />} />
+              <Route path="vendors" element={<Vendors />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="circle" element={<Circle />} />
               <Route path="settings" element={<Settings />} />
