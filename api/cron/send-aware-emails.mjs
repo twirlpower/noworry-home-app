@@ -1,0 +1,172 @@
+// Vercel Cron entry — runs daily per vercel.json (15:00 UTC, one hour after
+// the trial drip). For each Aware circle that signed up on/after the campaign
+// launch, sends any due Aware→Prepared conversion emails (day_1 / day_7 /
+// day_14 / day_30) keyed off created_at and stamps them into
+// family_circles.aware_emails_sent so we don't re-send.
+//
+// Auth: Vercel Cron requests carry `Authorization: Bearer <CRON_SECRET>`.
+// Reject anything that doesn't match — that's the only protection against
+// a public POST to this endpoint draining the email quota.
+
+import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+import {
+  dueEmailKeys,
+  subjectFor,
+  htmlFor,
+} from '../../src/lib/awareEmails.js'
+
+// Same recipient priority as the trial drip. home_owner can be a proxy
+// (auth_status='proxy', no email), so circle_manager wins ties.
+const ROLE_PRIORITY = { circle_manager: 1, home_owner: 2, care_partner: 3 }
+
+// Campaign launch. Only circles created on/after this date enter the drip;
+// everything older was pre-stamped in migration 050 so it can't receive the
+// sequence. Belt-and-suspenders with that pre-stamp.
+const CAMPAIGN_START = '2026-06-01T00:00:00Z'
+
+export default async function handler(req, res) {
+  const auth = req.headers?.authorization ?? ''
+  const secret = process.env.CRON_SECRET ?? ''
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'unauthorized' })
+  }
+
+  if (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL) {
+    return res.status(500).json({ error: 'resend_not_configured' })
+  }
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(500).json({ error: 'supabase_server_env_missing' })
+  }
+
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  const fromEmail = process.env.FROM_EMAIL
+
+  // 1. Candidate circles: free Aware tier, created on/after launch, and never
+  //    started a Prepared trial (a lapsed-trial circle already knows the pitch
+  //    — see flag 2). The aware_emails_sent stamps prevent any double-send.
+  const { data: circles, error: queryError } = await supabase
+    .from('family_circles')
+    .select('id, name, subscription_tier, created_at, trial_started_at, aware_emails_sent')
+    .eq('subscription_tier', 'aware')
+    .not('created_at', 'is', null)
+    .gte('created_at', CAMPAIGN_START)
+    .is('trial_started_at', null)
+
+  if (queryError) {
+    console.error('Aware cron: circle query failed:', queryError)
+    return res.status(500).json({ error: 'query_failed', detail: queryError.message })
+  }
+
+  const now = Date.now()
+  const actions = []
+
+  for (const c of circles ?? []) {
+    const sent = c.aware_emails_sent ?? {}
+    const due = dueEmailKeys(c.created_at, sent, now)
+    if (due.length === 0) continue
+
+    // 2. Find a reachable recipient (same disambiguated embed + auth.users
+    //    email fallback pattern as the trial drip).
+    const { data: members, error: memberErr } = await supabase
+      .from('circle_memberships')
+      .select('role, persons:persons!person_id (email, first_name, auth_id)')
+      .eq('circle_id', c.id)
+      .eq('status', 'active')
+      .in('role', ['circle_manager', 'home_owner', 'care_partner'])
+
+    if (memberErr) {
+      console.error(`Aware cron: member query failed for circle ${c.id}:`, memberErr)
+      actions.push({ circle: c.id, status: 'member_query_failed' })
+      continue
+    }
+
+    // Resolve in priority order, stopping at the first reachable member.
+    // First try persons.email (cheap, no extra round trip); only fall back
+    // to auth.admin.getUserById(auth_id) when that's null but the user has
+    // an auth account.
+    const sorted = (members ?? []).sort(
+      (a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99)
+    )
+
+    let target = null
+    let resolvedEmail = null
+    for (const m of sorted) {
+      const p = m.persons
+      if (!p) continue
+      if (p.email) {
+        target = m
+        resolvedEmail = p.email
+        break
+      }
+      if (p.auth_id) {
+        const { data: au, error: authErr } = await supabase.auth.admin.getUserById(p.auth_id)
+        if (authErr) {
+          console.error(`Aware cron: auth lookup failed for ${p.auth_id}:`, authErr)
+          continue
+        }
+        if (au?.user?.email) {
+          target = m
+          resolvedEmail = au.user.email
+          break
+        }
+      }
+    }
+
+    if (!target || !resolvedEmail) {
+      actions.push({ circle: c.id, status: 'no_reachable_recipient' })
+      continue
+    }
+
+    // 3. Send each due email. Failed sends stay unmarked — next cron tick
+    //    retries them. Per-send try/catch so one bad address can't poison
+    //    the whole batch.
+    const stampIso = new Date().toISOString()
+    const updated = { ...sent }
+
+    for (const key of due) {
+      try {
+        await resend.emails.send({
+          from: fromEmail,
+          to: resolvedEmail,
+          subject: subjectFor(key),
+          html: htmlFor(key, {
+            firstName: target.persons.first_name,
+            circleName: c.name,
+          }),
+        })
+        updated[key] = stampIso
+        actions.push({ circle: c.id, key, to: resolvedEmail, status: 'sent' })
+      } catch (err) {
+        console.error(`Aware cron: send ${key} → ${resolvedEmail} failed:`, err)
+        actions.push({ circle: c.id, key, status: 'send_failed', error: err?.message })
+      }
+    }
+
+    // 4. One UPDATE per circle, only if anything new was actually marked.
+    //    Race-safe enough for daily cadence — a concurrent invocation would
+    //    re-fetch and see the just-stamped keys before re-sending.
+    const newlySent = Object.keys(updated).filter((k) => !(k in sent))
+    if (newlySent.length > 0) {
+      const { error: upErr } = await supabase
+        .from('family_circles')
+        .update({ aware_emails_sent: updated })
+        .eq('id', c.id)
+      if (upErr) {
+        console.error(`Aware cron: stamp update failed for circle ${c.id}:`, upErr)
+        actions.push({ circle: c.id, status: 'stamp_failed', error: upErr.message })
+      }
+    }
+  }
+
+  return res.status(200).json({
+    ok: true,
+    circles_scanned: circles?.length ?? 0,
+    actions,
+  })
+}

@@ -6,6 +6,10 @@
     {
       "path": "/api/cron/send-trial-emails",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/send-aware-emails",
+      "schedule": "0 15 * * *"
     }
   ]
 }
