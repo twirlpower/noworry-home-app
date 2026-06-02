@@ -6,7 +6,9 @@ import { useCircle } from '../../context/CircleContext'
 import { useView } from '../../context/ViewContext'
 import { computeHomeHealth } from '../../lib/homeHealth'
 import { SAFETY_ITEMS } from '../../lib/safetyItems'
+import { getHomeDisplayName } from '../../utils/homeDisplayName'
 import WelcomeMessage from '../../components/WelcomeMessage'
+import VisitFeedbackPrompt from '../../components/VisitFeedbackPrompt'
 
 // Homeowner view dashboard.
 //
@@ -77,7 +79,7 @@ function fmtLongDay(d) {
 
 export default function HomeownerDashboard() {
   const { person } = useAuth()
-  const { activeCircle } = useCircle()
+  const { activeCircle, membership } = useCircle()
   const { homeownerViewMode, setHomeownerViewMode } = useView()
 
   const [score, setScore] = useState(null)
@@ -215,11 +217,21 @@ export default function HomeownerDashboard() {
   const familyHelpMessage = getFamilyHelpMessage(carePartnerNames)
   const primaryPartnerName = carePartnerNames[0] ?? null
   const nextItem = scheduled[0] ?? null
+  const homeLabel = getHomeDisplayName(
+    membership?.relationship_kind,
+    membership?.homeowners ?? [],
+    activeCircle?.name,
+  )
 
   // Shared hero + family signal block — identical in both layouts.
   const hero = (
     <>
       <section className={`homeowner-hero homeowner-hero-${tone}`}>
+        {homeLabel && (
+          <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', opacity: 0.65, margin: '0 0 0.6rem' }}>
+            {homeLabel}
+          </p>
+        )}
         <p className="homeowner-hero-label">Home Health Score</p>
         <div className="homeowner-hero-score">
           {score == null ? '—' : score}
@@ -264,6 +276,7 @@ export default function HomeownerDashboard() {
         <h1 className="homeowner-h1">
           Welcome home{person?.first_name ? `, ${person.first_name}` : ''}
         </h1>
+        <VisitFeedbackPrompt />
         {hero}
 
         {nextItem && (
@@ -305,6 +318,7 @@ export default function HomeownerDashboard() {
       </h1>
       <p className="homeowner-std-date">{fmtLongDay(new Date())}</p>
 
+      <VisitFeedbackPrompt />
       {hero}
 
       {/* Maintenance — next 60 days, up to 5 items */}
