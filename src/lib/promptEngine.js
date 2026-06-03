@@ -133,6 +133,26 @@ export function evaluate(ctx) {
   const currentYear = now.getFullYear()
   const month = now.getMonth() // 0-indexed
 
+  // Aware → Prepared upsell, constructed once so it can both (a) pre-empt the
+  // always-on seasonal card below and (b) serve as the priority-30 fallback
+  // when the seasonal card has been dismissed. tier === 'aware' means no
+  // active trial, so trialStartedAt is usually null; the >7-day clause also
+  // covers a trial that expired and reverted the circle to Aware.
+  const awareUpsell =
+    tier === 'aware' &&
+    (trialAgeDays == null || trialAgeDays > TRIAL_HONEYMOON_DAYS)
+      ? pick({
+          id: 'upsell-aware-prepared',
+          type: 'upsell',
+          priority: 30,
+          headline: 'Your plan is the missing piece',
+          body: "Your home is tracked. Now protect your family's plan — documents, emergency contacts, and family coordination, all in one place.",
+          cta: 'Try Prepared Free for 30 Days',
+          ctaPath: '/admin',
+          dismissible: true,
+        }, suppressed)
+      : null
+
   // Priority 10 — safety overdue (circle has had time to address; items
   // still incomplete).
   if (
@@ -193,7 +213,15 @@ export function evaluate(ctx) {
   // Priority 13 — seasonal reminder (always applicable; differs by month).
   {
     const p = pick(seasonalPrompt(month, currentYear), suppressed)
-    if (p) return p
+    if (p) {
+      // FIX 1 — the seasonal card returns every month and would otherwise
+      // bury the Aware→Prepared upsell (priority 30). When we'd show the
+      // seasonal card to an Aware user, show the eligible upsell instead.
+      // Safety / aging-system / overdue-maintenance prompts (P10-12) are
+      // evaluated above and still win, so this never hides a safety nudge.
+      if (awareUpsell) return awareUpsell
+      return p
+    }
   }
 
   // Priority 20 — no emergency contacts (Prepared+ only).
@@ -245,26 +273,10 @@ export function evaluate(ctx) {
     if (p) return p
   }
 
-  // Priority 30 — Aware → Prepared. Skip during the first week of an active
-  // trial, but Aware means no trial is running, so usually trialStartedAt
-  // is null. The "older than 7 days" clause covers trials that have
-  // expired and reverted the circle.
-  if (tier === 'aware') {
-    const trialIsStale = trialAgeDays == null || trialAgeDays > TRIAL_HONEYMOON_DAYS
-    if (trialIsStale) {
-      const p = pick({
-        id: 'upsell-aware-prepared',
-        type: 'upsell',
-        priority: 30,
-        headline: 'Your plan is the missing piece',
-        body: "Your home is tracked. Now protect your family's plan — documents, emergency contacts, and family coordination, all in one place.",
-        cta: 'Try Prepared Free for 30 Days',
-        ctaPath: '/trial-activation',
-        dismissible: true,
-      }, suppressed)
-      if (p) return p
-    }
-  }
+  // Priority 30 — Aware → Prepared. Fallback path: reached only when the
+  // seasonal card above was dismissed (otherwise the P13 swap already
+  // returned this). Built once as awareUpsell near the top.
+  if (awareUpsell) return awareUpsell
 
   // Priority 31 — Prepared → Covered. Honeymoon: don't pitch in the first
   // week of trial.
