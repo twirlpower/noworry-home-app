@@ -802,10 +802,7 @@ export default function Onboarding() {
             <p>
               {reason} — so we make sure your plan covers it completely.
             </p>
-            <ul className="enhanced-rate-list">
-              <li><strong>Covered Enhanced:</strong> $129/mo</li>
-              <li><strong>Complete Enhanced:</strong> $219/mo</li>
-            </ul>
+            <p>Your price is based on your home. We&apos;ll confirm the exact amount with you before anything is charged.</p>
             <p className="auth-subtitle">
               Everything else about your membership is identical — same visits,
               same services, same guarantee.
