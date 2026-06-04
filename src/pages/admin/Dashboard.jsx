@@ -30,8 +30,8 @@ const PARTNER_BANNER_DAYS_REMAINING = 30
 // see their precise number in Settings billing.
 const TRIAL_CHARGE_AMOUNTS = {
   prepared: { monthly: 12 },
-  covered:  { monthly: 99,  annual: 1068 },
-  complete: { monthly: 179, annual: 2148 },
+  covered:  { monthly: 119, annual: 1190 },
+  complete: { monthly: 219, annual: 2190 },
 }
 
 function fmtMoney(n) {

@@ -132,7 +132,7 @@ export default function QuarterlyChecklist({ tier }) {
               <Link to="/upgrade" className="btn-primary-full qc-convert-cta">
                 See What's Included in Covered →
               </Link>
-              <p className="qc-convert-fine">Starting at $99/mo · Cancel anytime</p>
+              <p className="qc-convert-fine">Starting at $119/mo · Cancel anytime</p>
             </div>
           )}
         </div>

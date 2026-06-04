@@ -18,12 +18,12 @@ const MS_PER_DAY = 86400000
 const BILLING_DISPLAY = {
   prepared: { monthly: 'Prepared · $12/month' },
   covered:  {
-    monthly: 'Covered · $99/month',
-    annual:  'Covered · $1,068/year ($89/mo average)',
+    monthly: 'Covered · $119/month',
+    annual:  'Covered · $1,190/year (2 months free)',
   },
   complete: {
-    monthly: 'Complete · $179/month',
-    annual:  'Complete · $2,148/year ($179/mo average)',
+    monthly: 'Complete · $219/month',
+    annual:  'Complete · $2,190/year (2 months free)',
   },
 }
 
