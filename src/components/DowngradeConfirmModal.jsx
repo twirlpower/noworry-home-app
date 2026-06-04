@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useCircle } from '../context/CircleContext'
+import { track } from '../lib/analytics'
 
 // Two-call confirmation modal for moving a circle from Prepared (trial OR
 // active) to the free Aware plan. Wraps api/stripe/downgrade-to-aware.mjs
@@ -67,6 +68,10 @@ export default function DowngradeConfirmModal({
       ...(payload.current_period_end !== undefined ? { current_period_end: payload.current_period_end } : {}),
     })
     setSubmitting(false)
+    track('subscription_cancelled', {
+      from_tier: activeCircle?.subscription_tier ?? null,
+      reason: 'user_initiated',
+    })
     onConfirmed?.()
     onClose?.()
   }

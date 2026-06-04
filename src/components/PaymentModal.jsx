@@ -3,6 +3,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { stripePromise } from '../lib/stripe'
 import { supabase } from '../lib/supabase'
 import { useCircle } from '../context/CircleContext'
+import { track } from '../lib/analytics'
 
 // Card element styling — senior-friendly: larger font, generous padding,
 // brand colors matched to the rest of the app.
@@ -166,6 +167,13 @@ function PaymentForm({ onSuccess, onCancel, tier = 'prepared', propertyTier = 's
       current_period_end: payload.current_period_end ?? null,
     })
     setSubmitting(false)
+
+    track('subscription_created', {
+      tier,
+      billing_cycle: billingCycle,
+      property_tier: propertyTier,
+      amount: activeRate?.amount ?? null,
+    })
 
     if (payload.coupon) {
       setPromoApplied(payload.coupon)
