@@ -67,14 +67,14 @@ export function AuthProvider({ children }) {
     if (user?.id) await loadPerson(user.id)
   }
 
-  async function signUp(email, password, firstName, lastName) {
+  async function signUp(email, password, firstName, lastName, phone = '') {
     // The persons row is created by the on_auth_user_created trigger from
     // user_metadata (see migrations/rls_policies_v1.sql). loadPerson() picks it up
     // once the auth session is established.
     const { error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { first_name: firstName, last_name: lastName } },
+      options: { data: { first_name: firstName, last_name: lastName, phone } },
     })
     if (authError) return { error: authError }
     return {}

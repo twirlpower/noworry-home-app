@@ -172,7 +172,7 @@ This is the public county-assessor address-autocomplete lookup table (Arapahoe/D
 
 ### Item 11 — Duplicate RLS Policies
 **Status:** ✅ Resolved — migration `053` drops the one `emergency_contacts` anomaly; all other multi-policy tables are intentional.
-**Resolution:** Tye confirmed the granular `emergency_contacts_insert` `with_check` already admits `circle_manager`, so the legacy `circle_manager_write_emergency_contacts` (`ALL`, circle_manager-only) is a strict subset of the four granular policies (which cover `home_owner`, `circle_manager`, `care_partner`, `care_coordinator` on every operation). `migrations/053_drop_legacy_emergency_contacts_policy.sql` drops it — no functional change, removes silent OR-stacking. **Pending manual execution by Tye.**
+**Resolution:** Tye confirmed the granular `emergency_contacts_insert` `with_check` already admits `circle_manager`, so the legacy `circle_manager_write_emergency_contacts` (`ALL`, circle_manager-only) is a strict subset of the four granular policies (which cover `home_owner`, `circle_manager`, `care_partner`, `care_coordinator` on every operation). `migrations/053_drop_legacy_emergency_contacts_policy.sql` drops it — no functional change, removes silent OR-stacking. **Executed in Supabase (2026-06-10).**
 **Phase 2 analysis of Query B.** Every public table's policies were grouped by `(cmd, roles)` (all policies are `roles = {public}`, scoped inside `qual`). Tables with 2+ same-`cmd` policies, classified:
 
 **Intentional additive (OR-by-design — leave as-is):**
@@ -212,7 +212,7 @@ Ordered by priority. Items **1, 2, 3, 4, and 6** are called out as highest prior
 | P0 | 6 | View-only **hard guard** in each write handler (`if (!canManage) return`) | ✅ Done — 8 pages |
 | P0 | 1 | Verify `maintenance_templates.relrowsecurity` live; enable if off | ✅ Verified live = on; no migration needed |
 | P0 | 3 | `.single()` → `.maybeSingle()` + null checks | ✅ Done — 17 call sites |
-| P1 | 11 | Review `pg_policies`; drop any duplicate via migration | ✅ Migration 053 written (drops `emergency_contacts` legacy policy); pending manual execution |
+| P1 | 11 | Review `pg_policies`; drop any duplicate via migration | ✅ Migration 053 executed (dropped `emergency_contacts` legacy policy) |
 | P1 | 10 | Confirm `home_seeds` read policy is ≤ authenticated & PII-free | ⚠️ Open read confirmed (intentional lookup); PII review recommended |
 | P2 | 4 | Split embedded joins against any RLS-disabled child table | ✅ N/A — all joined tables have RLS on; not in approved fix set |
 | — | 2, 5, 7, 8, 9 | No action (Pass) | — |
@@ -232,9 +232,9 @@ Ordered by priority. Items **1, 2, 3, 4, and 6** are called out as highest prior
 | — (053 reserved) | Enable RLS on `maintenance_templates` | ❌ Not needed — live `relrowsecurity = true` |
 | — (code) | `.single()` → `.maybeSingle()` + null handling (17 calls, 15 files) | ✅ Complete |
 | — (code) | `view_only` write guards via `!canManage` allowlist (8 pages) + view-only banners (6 pages) | ✅ Complete |
-| `053` | Drop superseded `circle_manager_write_emergency_contacts` (`emergency_contacts`) | ✅ Written — **pending manual execution** |
+| `053` | Drop superseded `circle_manager_write_emergency_contacts` (`emergency_contacts`) | ✅ Written **and executed** in Supabase (2026-06-10) |
 
-**Migration `053`** (`migrations/053_drop_legacy_emergency_contacts_policy.sql`) drops the one confirmed-redundant legacy policy. It is written but **not executed** — Tye runs all migrations manually in the Supabase SQL editor. Note: written to `migrations/` (this repo's actual migration folder — there is no `supabase/migrations/`), keeping it in sequence after `052`.
+**Migration `053`** (`migrations/053_drop_legacy_emergency_contacts_policy.sql`) drops the one confirmed-redundant legacy policy — **executed by Tye in the Supabase SQL editor**. No functional access change; `emergency_contacts` now has only the four granular per-command policies. Note: written to `migrations/` (this repo's actual migration folder — there is no `supabase/migrations/`), keeping it in sequence after `052`.
 
 #### Fix 2 — `.single()` → `.maybeSingle()` (17 calls across 15 files)
 Each null case handled in context (early return + surfaced message; never silently swallowed):
@@ -275,7 +275,7 @@ In-function guards added before the Supabase write in every member-facing write 
 Banners use the existing `page-placeholder` class (matching `Safety.jsx`), **not** inline `var(--color-*)` styles — those CSS variables are a different project's convention and are not defined in this app.
 
 ### Still open (manual, for Tye)
-1. **Item 11 / `emergency_contacts`** — ✅ resolved. Execute `migrations/053_drop_legacy_emergency_contacts_policy.sql` in the Supabase SQL editor.
+1. **Item 11 / `emergency_contacts`** — ✅ done. `migrations/053_drop_legacy_emergency_contacts_policy.sql` executed in Supabase (2026-06-10).
 2. **Item 10 / `home_seeds`** — confirm the table holds only public assessor fields (no PII). Open read is intentional; no change unless a sensitive column exists.
 3. **Item 2 (optional)** — re-run the `pg_proc` query to confirm no out-of-band function appeared after migration 052 without the REVOKE/GRANT pattern.
 

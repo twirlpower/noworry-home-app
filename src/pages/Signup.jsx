@@ -9,10 +9,24 @@ export default function Signup() {
   const [setupType, setSetupType] = useState(null) // 'self' or 'other'
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  function handlePhoneChange(raw) {
+    const digits = raw.replace(/\D/g, '').slice(0, 10)
+    let formatted = digits
+    if (digits.length >= 7) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    } else if (digits.length >= 4) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+    } else if (digits.length >= 1) {
+      formatted = `(${digits}`
+    }
+    setPhoneNumber(formatted)
+  }
   const { signUp } = useAuth()
   const navigate = useNavigate()
 
@@ -21,7 +35,14 @@ export default function Signup() {
     setError('')
     setLoading(true)
 
-    const { error: signUpError } = await signUp(email, password, firstName, lastName)
+    const phoneDigits = phoneNumber.replace(/\D/g, '')
+    if (phoneDigits.length !== 10) {
+      setError('Please enter a valid 10-digit US phone number.')
+      setLoading(false)
+      return
+    }
+
+    const { error: signUpError } = await signUp(email, password, firstName, lastName, phoneNumber)
     if (signUpError) {
       setError(signUpError.message)
       setLoading(false)
@@ -125,6 +146,20 @@ export default function Signup() {
               />
             </label>
           </div>
+
+          <label className="form-label">
+            Phone
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              required
+              className="form-input"
+              placeholder="(303) 555-0100"
+              autoComplete="tel"
+              inputMode="numeric"
+            />
+          </label>
 
           <label className="form-label">
             Email
