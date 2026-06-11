@@ -298,7 +298,7 @@ async function syncOneChecklist(p) {
       status:              'in_progress',
     })
     .select('id')
-    .single()
+    .maybeSingle()
   if (vErr || !visitRow) throw vErr || new Error('visit_insert_failed')
 
   // 2. Upload item photos sequentially, accumulating paths.

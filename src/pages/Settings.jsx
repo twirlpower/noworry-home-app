@@ -280,6 +280,10 @@ export default function Settings() {
 
   async function saveCircleName(e) {
     e.preventDefault()
+    if (!canRename) {
+      console.warn('[Settings] rename blocked: role', membership?.role)
+      return
+    }
     setCError('')
     setCSaving(true)
 
@@ -288,10 +292,16 @@ export default function Settings() {
       .update({ name: circleName.trim() })
       .eq('id', activeCircle.id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       setCError(rlsHint(error.message))
+      setCSaving(false)
+      return
+    }
+
+    if (!data) {
+      setCError('Could not rename — the circle record was not found.')
       setCSaving(false)
       return
     }

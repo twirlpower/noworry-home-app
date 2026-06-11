@@ -57,7 +57,7 @@ export async function uploadDocument({ circleId, personId, file, title, document
       uploaded_by: personId,
     })
     .select()
-    .single()
+    .maybeSingle()
 
   if (insErr) {
     // Best-effort cleanup. If THIS fails too we let the user see the
@@ -65,6 +65,12 @@ export async function uploadDocument({ circleId, personId, file, title, document
     // not a security issue (the storage policies still gate access).
     await supabase.storage.from(BUCKET).remove([path]).catch(() => {})
     throw insErr
+  }
+  if (!data) {
+    // No row returned (e.g. RLS denied the RETURNING read) — clean up the
+    // uploaded object so we don't orphan it, then surface the failure.
+    await supabase.storage.from(BUCKET).remove([path]).catch(() => {})
+    throw new Error('Document record was not created.')
   }
   return data
 }

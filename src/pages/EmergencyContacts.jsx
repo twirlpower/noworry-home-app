@@ -119,6 +119,10 @@ export default function EmergencyContacts() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!canManage) {
+      console.warn('[EmergencyContacts] save blocked: role', membership?.role)
+      return
+    }
     setError('')
     setSaving(true)
 
@@ -141,9 +145,14 @@ export default function EmergencyContacts() {
           priority_order: maxOrder + 1,
         })
         .select(SELECT_COLS)
-        .single()
+        .maybeSingle()
       if (saveErr) {
         setError(rlsHint(saveErr.message))
+        setSaving(false)
+        return
+      }
+      if (!data) {
+        setError('Could not save the contact — please try again.')
         setSaving(false)
         return
       }
@@ -172,6 +181,10 @@ export default function EmergencyContacts() {
   // Optimistic delete + re-numbering of higher-priority rows. On any DB
   // error we reload from source-of-truth rather than try to surgically undo.
   async function handleDelete(c) {
+    if (!canManage) {
+      console.warn('[EmergencyContacts] delete blocked: role', membership?.role)
+      return
+    }
     setConfirmDeleteId(null)
     setError('')
 

@@ -159,14 +159,14 @@ export default function CRMMaintenanceTab({ onChange }) {
 
     let res
     if (panelMode === 'new') {
-      res = await supabase.from('maintenance_templates').insert(payload).select().single()
+      res = await supabase.from('maintenance_templates').insert(payload).select().maybeSingle()
     } else {
       res = await supabase
         .from('maintenance_templates')
         .update(payload)
         .eq('id', panelMode)
         .select()
-        .single()
+        .maybeSingle()
     }
     if (res.error) {
       setError(res.error.message)

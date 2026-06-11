@@ -129,6 +129,10 @@ export default function HomeProfile() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!canEdit) {
+      console.warn('[HomeProfile] save blocked: role', membership?.role)
+      return
+    }
     setError('')
     setSaving(true)
 
@@ -154,10 +158,16 @@ export default function HomeProfile() {
       .update(updates)
       .eq('id', home.id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (saveError) {
       setError(saveError.message)
+      setSaving(false)
+      return
+    }
+
+    if (!data) {
+      setError('Could not save changes — the home record was not found.')
       setSaving(false)
       return
     }
@@ -215,6 +225,10 @@ export default function HomeProfile() {
 
   async function handleSaveSystem(e) {
     e.preventDefault()
+    if (!canEdit) {
+      console.warn('[HomeProfile] system save blocked: role', membership?.role)
+      return
+    }
     setSysError('')
     setSysSaving(true)
 
@@ -258,6 +272,10 @@ export default function HomeProfile() {
   }
 
   async function handleRemoveSystem(s) {
+    if (!canEdit) {
+      console.warn('[HomeProfile] system remove blocked: role', membership?.role)
+      return
+    }
     if (!window.confirm(`Remove "${s.name}" from your home systems?`)) return
     const { error: rmErr } = await supabase
       .from('home_systems')
@@ -419,6 +437,12 @@ export default function HomeProfile() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       <div className="profile-card">
         <h3>Address</h3>

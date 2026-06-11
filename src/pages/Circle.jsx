@@ -66,6 +66,10 @@ export default function Circle() {
   // home_owner viewers (see PRONOUN_EDIT_ROLES). Best-effort — reload
   // members on success so the chip selection reflects immediately.
   async function updateHomeownerGender(personId, newGender) {
+    if (!PRONOUN_EDIT_ROLES.has(membership?.role)) {
+      console.warn('[Circle] pronoun update blocked: role', membership?.role)
+      return
+    }
     if (!personId) return
     const { error: gErr } = await supabase
       .from('persons')
@@ -97,6 +101,10 @@ export default function Circle() {
 
   async function handleInvite(e) {
     e.preventDefault()
+    if (!canManage) {
+      console.warn('[Circle] invite blocked: role', membership?.role)
+      return
+    }
     setError(''); setNotice(''); setSaving(true)
 
     // Create the invited person (no auth yet — they'll claim it on signup).
@@ -110,7 +118,7 @@ export default function Circle() {
         created_by: person.id,
       })
       .select()
-      .single()
+      .maybeSingle()
 
     if (pErr) {
       setError(
@@ -118,6 +126,12 @@ export default function Circle() {
           ? 'Someone with that email already has a profile.'
           : pErr.message
       )
+      setSaving(false)
+      return
+    }
+
+    if (!invited) {
+      setError('Could not create the member profile — please try again.')
       setSaving(false)
       return
     }
@@ -177,6 +191,12 @@ export default function Circle() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       {error && <div className="auth-error" role="alert">{error}</div>}
       {notice && <div className="auth-notice" role="status">{notice}</div>}
@@ -265,6 +285,7 @@ export default function Circle() {
                       advisor={m}
                       circleId={activeCircle.id}
                       grantedByPersonId={person.id}
+                      canManage={GRANT_ADMIN_ROLES.has(membership?.role)}
                     />
                   )}
                 </div>
@@ -282,7 +303,7 @@ export default function Circle() {
 // when the viewer is a circle admin. Lets the admin toggle access to
 // individual documents and emergency contacts; revocation flips
 // revoked_at on the existing grant row (we keep history, never delete).
-function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
+function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId, canManage }) {
   const [documents, setDocuments] = useState([])
   const [contacts, setContacts] = useState([])
   const [grants, setGrants] = useState({ document: new Set(), emergency_contact: new Set() })
@@ -320,6 +341,10 @@ function TrustedAdvisorGrants({ advisor, circleId, grantedByPersonId }) {
   }, [advisor?.person_id, circleId])
 
   async function toggleGrant(resourceType, resourceId, currentlyGranted) {
+    if (!canManage) {
+      console.warn('[Circle] grant change blocked: insufficient role')
+      return
+    }
     if (busy) return
     setBusy(true); setErr('')
     if (currentlyGranted) {

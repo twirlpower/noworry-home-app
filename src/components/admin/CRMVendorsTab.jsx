@@ -150,7 +150,7 @@ export default function CRMVendorsTab({ onChange }) {
         status: 'prospect',
         tech_tier: 'onboarding',
       }
-      res = await supabase.from('vendors').insert(payload).select().single()
+      res = await supabase.from('vendors').insert(payload).select().maybeSingle()
       if (!res.error && res.data) {
         setVendors((prev) => [res.data, ...prev])
         onChange?.()

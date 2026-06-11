@@ -134,6 +134,10 @@ export default function Vendors() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!canManage) {
+      console.warn('[Vendors] save blocked: role', membership?.role)
+      return
+    }
     setError('')
     setSaving(true)
 
@@ -155,9 +159,14 @@ export default function Vendors() {
           added_by_person_id: person?.id ?? null,
         })
         .select(SELECT_COLS)
-        .single()
+        .maybeSingle()
       if (saveErr) {
         setError(rlsHint(saveErr.message))
+        setSaving(false)
+        return
+      }
+      if (!data) {
+        setError('Could not save the vendor — please try again.')
         setSaving(false)
         return
       }
@@ -187,6 +196,10 @@ export default function Vendors() {
   // (not DELETE) for the family-write roles, so this is the path the RLS
   // policy expects. Optimistic remove from the list; on error reload.
   async function handleSoftDelete(v) {
+    if (!canManage) {
+      console.warn('[Vendors] delete blocked: role', membership?.role)
+      return
+    }
     setConfirmDeleteId(null)
     setError('')
     const removed = v
@@ -256,6 +269,12 @@ export default function Vendors() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       <p className="page-placeholder">
         Your trusted contacts — shared with your whole family circle.

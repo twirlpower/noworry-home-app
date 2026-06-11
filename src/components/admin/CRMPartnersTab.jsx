@@ -153,7 +153,7 @@ export default function CRMPartnersTab({ onChange }) {
 
     let res
     if (panelMode === 'new') {
-      res = await supabase.from('crm_partners').insert(payload).select().single()
+      res = await supabase.from('crm_partners').insert(payload).select().maybeSingle()
       if (!res.error && res.data) {
         setPartners((prev) => [res.data, ...prev])
         onChange?.()

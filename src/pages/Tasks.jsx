@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useCircle } from '../context/CircleContext'
+import { hasPillar2Access } from '../lib/permissions'
 
 const NOTE_PREVIEW_CHARS = 80
 const NOTES_FEED_LIMIT = 50
@@ -208,6 +209,10 @@ export default function Tasks() {
 
   async function handleSave(e) {
     e.preventDefault()
+    if (!canManage) {
+      console.warn('[Tasks] write blocked: role', membership?.role)
+      return
+    }
     setError('')
     setSaving(true)
 
@@ -245,6 +250,10 @@ export default function Tasks() {
   }
 
   async function markComplete(t) {
+    if (!canActOn(t)) {
+      console.warn('[Tasks] complete blocked: role', membership?.role)
+      return
+    }
     const { error: e } = await supabase
       .from('tasks')
       .update({
@@ -261,6 +270,10 @@ export default function Tasks() {
   }
 
   async function reopenTask(t) {
+    if (!canActOn(t)) {
+      console.warn('[Tasks] reopen blocked: role', membership?.role)
+      return
+    }
     const { error: e } = await supabase
       .from('tasks')
       .update({
@@ -280,6 +293,10 @@ export default function Tasks() {
   // status='cancelled' and rely on the existing .neq('status','cancelled')
   // filter to drop it from the visible list.
   async function removeTask(t) {
+    if (!canManage) {
+      console.warn('[Tasks] remove blocked: role', membership?.role)
+      return
+    }
     setConfirmRemoveId(null)
     setExpandedId(null)
     const { error: e } = await supabase
@@ -296,6 +313,10 @@ export default function Tasks() {
 
   async function postNote(e) {
     e.preventDefault()
+    if (!hasPillar2Access(membership?.role)) {
+      console.warn('[Tasks] note blocked: role', membership?.role)
+      return
+    }
     const content = noteDraft.trim()
     if (!content) return
     setPostingNote(true)
@@ -308,9 +329,14 @@ export default function Tasks() {
         content,
       })
       .select('id, content, created_at, author:persons!author_id (id, first_name, last_name)')
-      .single()
+      .maybeSingle()
     if (insErr) {
       setNoteError(rlsHint(insErr.message))
+      setPostingNote(false)
+      return
+    }
+    if (!data) {
+      setNoteError('Could not post the note — please try again.')
       setPostingNote(false)
       return
     }
@@ -386,6 +412,12 @@ export default function Tasks() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       {error && <div className="auth-error" role="alert">{error}</div>}
       {notice && <div className="auth-notice" role="status">{notice}</div>}

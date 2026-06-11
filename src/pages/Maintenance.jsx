@@ -74,6 +74,10 @@ export default function Maintenance() {
   }
 
   async function handleRefresh() {
+    if (!canGenerate) {
+      console.warn('[Maintenance] refresh blocked: role', membership?.role)
+      return
+    }
     if (!homeId) return
     setError('')
     setRefreshing(true)
@@ -124,6 +128,12 @@ export default function Maintenance() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       <QuarterlyChecklist tier={activeCircle.subscription_tier} />
 

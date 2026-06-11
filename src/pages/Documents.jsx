@@ -116,6 +116,10 @@ export default function Documents() {
 
   async function handleUpload(e) {
     e.preventDefault()
+    if (!canManage) {
+      console.warn('[Documents] upload blocked: role', membership?.role)
+      return
+    }
     if (!file) {
       setError('Choose a file to upload.')
       return
@@ -144,6 +148,10 @@ export default function Documents() {
   }
 
   async function archiveDoc(d) {
+    if (!canManage) {
+      console.warn('[Documents] archive blocked: role', membership?.role)
+      return
+    }
     if (!window.confirm(
       `Remove "${d.title}" from your vault? You can contact us within 30 days if you need it restored.`
     )) return
@@ -219,6 +227,12 @@ export default function Documents() {
           </button>
         )}
       </div>
+
+      {membership?.role === 'view_only' && (
+        <p className="page-placeholder">
+          You have view-only access to this home.
+        </p>
+      )}
 
       {error && <div className="auth-error" role="alert">{error}</div>}
       {notice && <div className="auth-notice" role="status">{notice}</div>}

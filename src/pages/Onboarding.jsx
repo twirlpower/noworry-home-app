@@ -43,6 +43,20 @@ export default function Onboarding() {
   // Home Owner info (for "setting up for someone else")
   const [ownerFirst, setOwnerFirst] = useState('')
   const [ownerLast, setOwnerLast] = useState('')
+  // Optional homeowner contact + pronouns (Path B). All nullable — the
+  // proxy persons row is created with whatever the adult child provides.
+  // ownerGender is null until picked; values map to the gender_type enum
+  // (she_her / he_him / they_them). "Prefer not to say" stores null.
+  const [ownerEmail, setOwnerEmail] = useState('')
+  const [ownerPhone, setOwnerPhone] = useState('')
+  const [ownerGender, setOwnerGender] = useState(null)
+  // Inline validation for the optional homeowner phone — empty is allowed,
+  // a non-empty value must be 10 digits. Shown under the field on Continue.
+  const [ownerPhoneError, setOwnerPhoneError] = useState('')
+  // Inline catch for a duplicate homeowner email — persons.email is UNIQUE,
+  // so a collision only surfaces after setup_home_circle runs. Shown under
+  // the email field; the RPC error handler sets this and returns to the step.
+  const [ownerEmailError, setOwnerEmailError] = useState('')
   // Path B picker — structured relationship that drives the personalized
   // home-display name. 'adult_child' is the most common case; the user
   // confirms their choice on the picker. Replaces the prior freeform
@@ -137,6 +151,24 @@ export default function Onboarding() {
     setSelectedSeed(s)
   }
 
+  // Same (XXX) XXX-XXXX formatter as the acting user's phone field in
+  // Signup.jsx — caps input at 10 digits. The homeowner phone is optional;
+  // format is validated on the homeowner-step Continue, only when non-empty.
+  // Editing clears any prior inline error.
+  function handleOwnerPhoneChange(raw) {
+    const digits = raw.replace(/\D/g, '').slice(0, 10)
+    let formatted = digits
+    if (digits.length >= 7) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    } else if (digits.length >= 4) {
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+    } else if (digits.length >= 1) {
+      formatted = `(${digits}`
+    }
+    setOwnerPhone(formatted)
+    if (ownerPhoneError) setOwnerPhoneError('')
+  }
+
   async function handleComplete(e) {
     e.preventDefault()
     setError('')
@@ -217,33 +249,41 @@ export default function Onboarding() {
       },
       p_owner_first: setupType === 'other' ? ownerFirst : null,
       p_owner_last: setupType === 'other' ? ownerLast : null,
-      p_owner_relationship: null,
+      // Path B: the picker value (adult_child, grandchild…). The RPC casts
+      // it to relationship_type and stamps relationship_kind on the
+      // circle_manager row. Path A ignores it (the owner is always 'self').
+      p_owner_relationship: setupType === 'other' ? relationshipKind : null,
+      // Path B optional homeowner contact + pronouns. The RPC nullif/trims
+      // email + phone (blank → NULL, satisfying persons.valid_email) and
+      // casts gender to gender_type. Path A sends null for all three.
+      p_owner_email: setupType === 'other' ? ownerEmail : null,
+      p_owner_phone: setupType === 'other' ? ownerPhone : null,
+      p_owner_gender: setupType === 'other' ? ownerGender : null,
     })
 
     if (rpcError) {
+      // Duplicate homeowner email (Path B): persons.email is UNIQUE, so a
+      // collision aborts the whole transaction. Surface it inline under the
+      // email field (same message-sniff approach sendSingleInvite uses) and
+      // return to the homeowner step where that field lives — all prior
+      // input is preserved in component state.
+      const isDupEmail =
+        setupType === 'other' &&
+        ownerEmail.trim() &&
+        (rpcError.code === '23505' ||
+          /persons_email_key|duplicate key|unique/i.test(rpcError.message || ''))
+      if (isDupEmail) {
+        setOwnerEmailError(
+          'This email is already associated with a NoWorry Home account. ' +
+          'Leave it blank for now — you can link them later.'
+        )
+        setLoading(false)
+        setStep('homeowner')
+        return
+      }
       setError(rpcError.message || 'Something went wrong. Please try again.')
       setLoading(false)
       return
-    }
-
-    // Stamp the structured relationship_kind on the acting user's
-    // membership in the new circle. Migration 038's backfill sets
-    // 'self' for home_owner / circle_manager rows on EXISTING circles;
-    // new rows from setup_home_circle won't have it until we set it
-    // here. Path A users are self, Path B users picked their relation
-    // to the homeowner on the prior step.
-    if (circleId) {
-      const kind = setupType === 'other' ? relationshipKind : 'self'
-      try {
-        await supabase
-          .from('circle_memberships')
-          .update({ relationship_kind: kind })
-          .eq('circle_id', circleId)
-          .eq('person_id', person.id)
-          .eq('status', 'active')
-      } catch {
-        /* best-effort — non-fatal */
-      }
     }
 
     // Phase 3c — Path B: author the homeowner's first experience.
@@ -376,7 +416,7 @@ export default function Onboarding() {
       time_to_complete_seconds: Math.round((Date.now() - onboardingStartedAt.current) / 1000),
     })
     await reloadCircles()
-    navigate('/dashboard')
+    navigate(setupType === 'self' ? '/home' : '/dashboard')
   }
 
   // Both paths out of the invite step (skip OR send-then-dashboard) set the
@@ -418,7 +458,7 @@ export default function Onboarding() {
         created_by: person.id,
       })
       .select()
-      .single()
+      .maybeSingle()
 
     if (pErr) {
       setError(
@@ -426,6 +466,12 @@ export default function Onboarding() {
           ? 'That email already has a profile — finish onboarding and invite from My Circle instead.'
           : pErr.message
       )
+      setLoading(false)
+      return
+    }
+
+    if (!invP) {
+      setError('Could not create the invite — please try again.')
       setLoading(false)
       return
     }
@@ -576,6 +622,67 @@ export default function Onboarding() {
             </label>
           </div>
 
+          <label className="form-label">
+            Their email address{' '}
+            <span className="onboarding-optional">(optional)</span>
+            <input
+              type="email"
+              value={ownerEmail}
+              onChange={(e) => {
+                setOwnerEmail(e.target.value)
+                if (ownerEmailError) setOwnerEmailError('')
+              }}
+              className="form-input"
+              placeholder="mom@example.com"
+              autoComplete="off"
+              aria-invalid={ownerEmailError ? 'true' : undefined}
+            />
+          </label>
+          {ownerEmailError && (
+            <div className="auth-error" role="alert">{ownerEmailError}</div>
+          )}
+
+          <label className="form-label">
+            Their phone number{' '}
+            <span className="onboarding-optional">(optional)</span>
+            <input
+              type="tel"
+              value={ownerPhone}
+              onChange={(e) => handleOwnerPhoneChange(e.target.value)}
+              className="form-input"
+              placeholder="(303) 555-0100"
+              autoComplete="off"
+              inputMode="numeric"
+              aria-invalid={ownerPhoneError ? 'true' : undefined}
+            />
+          </label>
+          {ownerPhoneError && (
+            <div className="auth-error" role="alert">{ownerPhoneError}</div>
+          )}
+
+          <p className="form-label" style={{ marginTop: '1rem' }}>
+            How do you refer to {ownerFirst || 'them'}?{' '}
+            <span className="onboarding-optional">(optional)</span>
+          </p>
+          <div className="relationship-picker">
+            {[
+              { value: 'she_her',   label: 'She/her (Mom)' },
+              { value: 'he_him',    label: 'He/him (Dad)' },
+              { value: 'they_them', label: 'They/them' },
+              { value: null,        label: 'Prefer not to say / skip' },
+            ].map((opt) => (
+              <button
+                key={opt.value ?? 'skip'}
+                type="button"
+                className={`relationship-pick ${ownerGender === opt.value ? 'on' : ''}`}
+                onClick={() => setOwnerGender(opt.value)}
+                aria-pressed={ownerGender === opt.value}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <p className="form-label" style={{ marginTop: '1rem' }}>
             What's your relationship to {ownerFirst || 'them'}?
           </p>
@@ -594,7 +701,20 @@ export default function Onboarding() {
 
           <button
             className="btn-primary-full"
-            onClick={() => setStep('preferences')}
+            onClick={() => {
+              // Optional homeowner phone: empty skips, otherwise must be 10
+              // digits. Inline error renders under the field; we don't
+              // advance until it's blank or valid.
+              if (ownerPhone.trim()) {
+                const digits = ownerPhone.replace(/\D/g, '')
+                if (digits.length !== 10) {
+                  setOwnerPhoneError('Please enter a valid 10-digit phone number, or leave it blank.')
+                  return
+                }
+              }
+              setOwnerPhoneError('')
+              setStep('preferences')
+            }}
             disabled={!ownerFirst || !ownerLast || !relationshipKind}
           >
             Continue →

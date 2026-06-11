@@ -178,8 +178,9 @@ export default function CRMLeadsTab({ onChange }) {
       }
     }
 
-    const ins = await supabase.from(table).insert(row).select().single()
+    const ins = await supabase.from(table).insert(row).select().maybeSingle()
     if (ins.error) { setError(ins.error.message); setBusyId(null); return }
+    if (!ins.data) { setError('Could not create the record — please try again.'); setBusyId(null); return }
 
     const upd = await supabase
       .from('leads')

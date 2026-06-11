@@ -148,10 +148,16 @@ export default function VendorJobsSection({ vendorId, onChange }) {
       .from('vendor_jobs')
       .insert(payload)
       .select()
-      .single()
+      .maybeSingle()
 
     if (insErr) {
       setError(insErr.message)
+      setSaving(false)
+      return
+    }
+
+    if (!data) {
+      setError('Could not log the job — please try again.')
       setSaving(false)
       return
     }
@@ -189,10 +195,16 @@ export default function VendorJobsSection({ vendorId, onChange }) {
       })
       .eq('id', jobId)
       .select()
-      .single()
+      .maybeSingle()
 
     if (updErr) {
       setError(updErr.message)
+      setPayingSaving(false)
+      return
+    }
+
+    if (!data) {
+      setError('Could not mark the job paid — it may no longer exist.')
       setPayingSaving(false)
       return
     }
