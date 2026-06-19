@@ -66,3 +66,20 @@ export function downgradeHtml({ firstName, circleName }) {
     <p>If something didn't work for you, hit reply on this email and tell us. We read every message.</p>
   `)
 }
+
+// ── Payment failed (card declined — warm, no urgency panic) ─────────────────
+
+export function paymentFailedSubject() {
+  return "Action needed — your NoWorry Home payment didn't go through"
+}
+
+export function paymentFailedHtml({ firstName, circleName }) {
+  return shell(`
+    <h1 style="color: #0A4A30; font-size: 22px; margin: 0 0 12px;">Let's get your payment sorted, ${escapeHtml(firstName) || 'there'}</h1>
+    <p>We tried to process the payment for <strong>${escapeHtml(circleName) || 'your circle'}</strong>, but your card was declined. It happens — an expired card or a quick hold from your bank is usually all it is.</p>
+    <p>Your home profile is completely safe. Nothing has changed, and you have time to update your payment method.</p>
+    <p><a href="https://app.noworry-home.com/settings" style="color: #0A4A30; font-weight: 600;">Update your payment method →</a></p>
+    <p>Once your card goes through, you're all set — there's nothing else you need to do.</p>
+    <p>The NoWorry Home Team</p>
+  `)
+}

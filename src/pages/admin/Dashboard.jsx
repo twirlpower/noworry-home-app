@@ -156,6 +156,30 @@ export default function Dashboard() {
   // roles, so the server enforces who's allowed to start the trial.
   async function handleStartTrial() {
     if (!activeCircle) return
+
+    // LOCKED trial policy — Path A vs Path B (see migrations 046–049, 038):
+    //   Path A — homeowner setting up for themselves (relationship_kind ===
+    //     'self'): 30-day trial, NO credit card. This is the no-card DB flip
+    //     below — no Stripe object is created until/unless they add a card
+    //     later from the trial bar.
+    //   Path B — adult child / circle_manager setting up for a parent
+    //     (relationship_kind is an explicit value other than 'self'): credit
+    //     card REQUIRED at trial start. Route through PaymentModal, which
+    //     posts to create-subscription.mjs and creates a real Stripe
+    //     subscription (30-day trial + collected card).
+    //
+    // A NULL/absent relationship_kind defaults to Path A: migration 038
+    // backfilled every legacy billing-role membership to 'self', and
+    // onboarding sets an explicit value for new Path B circles — so a null
+    // here is an anomaly that is almost certainly a self/legacy homeowner.
+    // Defaulting it to no-card preserves today's behavior rather than
+    // surprising a homeowner with a card wall.
+    const rk = membership?.relationship_kind
+    if (rk && rk !== 'self') {
+      setPaymentOpen(true)
+      return
+    }
+
     setTrialError('')
     setTrialLoading(true)
 
