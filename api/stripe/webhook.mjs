@@ -361,12 +361,16 @@ export default async function handler(req, res) {
       default:
         outcome = 'unhandled_type'
     }
-  } catch (e) {
+  } catch (err) {
     // A handler failure (almost always a transient DB error) must NOT be
     // logged as processed — return 500 so Stripe retries. The handlers are
     // idempotent deterministic writes, so a retry re-applies cleanly.
-    console.error('[stripe/webhook] handler error', { id: event.id, type: event.type, error: e?.message })
-    return res.status(500).json({ error: 'handler_failed' })
+    // Surface the actual error (message + stack in logs, message in the
+    // response) so the next Stripe resend shows the real cause — TEMPORARY
+    // verbose diagnostics; tighten the response body back to a generic error
+    // once the production 500 is identified.
+    console.error('[stripe/webhook] 500 error:', err.message, err.stack)
+    return res.status(500).json({ error: 'handler_failed', detail: err.message })
   }
 
   // ── Record as processed (idempotency + audit) ─────────────────────────────
