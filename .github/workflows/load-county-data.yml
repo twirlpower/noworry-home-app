@@ -163,6 +163,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          set statement_timeout = 0;
           insert into public.home_seeds_update_log
             (home_seed_id, home_id, column_name, old_value, new_value, county_refresh_date)
           select hs.id, hm.id, d.column_name, d.old_value, d.new_value, now()
@@ -204,6 +205,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          set statement_timeout = 0;
           insert into public.home_seeds (
             county, parcel_id, address_line1, city, state, zip, year_built,
             square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_heat_type,
@@ -242,6 +244,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          set statement_timeout = 0;
           update public.home_seeds hs
              set last_county_refresh = now()
             from home_seeds_stage s
@@ -263,6 +266,7 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          set statement_timeout = 0;
           insert into public.zip_refresh_status (zip, city, state, property_count)
           select hs.zip,
                  mode() within group (order by hs.city)  as city,
