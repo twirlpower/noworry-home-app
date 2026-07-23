@@ -198,45 +198,63 @@ jobs:
              and d.new_value is distinct from d.old_value;
           " || exit 1
 
-      # 10 — Section 8 STEP 2: upsert UNCLAIMED + insert brand-new. The WHERE
-      # belongs to DO UPDATE and gates on the EXISTING row's claimed flag.
-      # Verbatim from migration 055 Section 8.
-      - name: 'Section 8 Step 2 - upsert unclaimed + insert new'
+      # 10 — Section 8 STEP 2: upsert UNCLAIMED + insert brand-new, BATCHED in
+      # 100K-row chunks by stage_id. A single 1.1M-row upsert bloats the heap +
+      # all 9 indexes and blows the WAL/temp budget (see the disk-full incident);
+      # batching commits each chunk separately so WAL recycles and temp stays
+      # bounded. The INSERT ... ON CONFLICT ... WHERE home_seeds.claimed = false
+      # ... coalesce semantics are byte-identical to migration 055 Section 8
+      # Step 2 — only the source is a stage_id range slice, wrapped in a CTE so
+      # each batch can report its own upserted-row count.
+      - name: 'Section 8 Step 2 - upsert unclaimed + insert new (batched 100K)'
         if: ${{ !inputs.dry_run }}
         run: |
-          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
-          set statement_timeout = 0;
-          insert into public.home_seeds (
-            county, parcel_id, address_line1, city, state, zip, year_built,
-            square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_heat_type,
-            cooling_type, roof_type, roof_material, exterior_type, garage_sf,
-            basement_finished_sf, basement_unfinished_sf, lot_size_sf,
-            foundation_type, last_sale_date, last_sale_price, property_type,
-            data_tier, data_quality, bedrooms_confirmed, source, last_county_refresh)
-          select county, parcel_id, address_line1, city, state, zip, year_built,
-                 square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_type,
-                 cooling_type, roof_type, roof_material, exterior_type, garage_sf,
-                 basement_finished_sf, basement_unfinished_sf, lot_size_sf,
-                 foundation_type, last_sale_date, last_sale_price, property_type,
-                 data_tier, nullif(data_quality,''), (bedrooms is not null), source,
-                 now()
-            from home_seeds_stage
-          on conflict (address_normalized, zip, county) do update set
-            -- square_feet IS overwritten on purpose. See note 5.
-            square_feet   = excluded.square_feet,
-            parcel_id     = coalesce(excluded.parcel_id,     home_seeds.parcel_id),
-            property_type = coalesce(excluded.property_type, home_seeds.property_type),
-            cooling_type  = coalesce(excluded.cooling_type,  home_seeds.cooling_type),
-            roof_material = coalesce(excluded.roof_material, home_seeds.roof_material),
-            lot_size_sf   = coalesce(excluded.lot_size_sf,   home_seeds.lot_size_sf),
-            last_sale_date  = coalesce(excluded.last_sale_date,  home_seeds.last_sale_date),
-            last_sale_price = coalesce(excluded.last_sale_price, home_seeds.last_sale_price),
-            foundation_type = coalesce(excluded.foundation_type, home_seeds.foundation_type),
-            data_tier     = excluded.data_tier,
-            data_quality  = excluded.data_quality,
-            last_county_refresh = now()
-          where home_seeds.claimed = false;
-          " || exit 1
+          MAXID=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "select coalesce(max(stage_id),0) from home_seeds_stage") || exit 1
+          echo "Batched upsert: staged max stage_id=$MAXID, 100000-row chunks."
+          LO=0
+          while [ "$LO" -lt "$MAXID" ]; do
+            HI=$((LO + 100000))
+            N=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "
+            set statement_timeout = 0;
+            with ins as (
+              insert into public.home_seeds (
+                county, parcel_id, address_line1, city, state, zip, year_built,
+                square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_heat_type,
+                cooling_type, roof_type, roof_material, exterior_type, garage_sf,
+                basement_finished_sf, basement_unfinished_sf, lot_size_sf,
+                foundation_type, last_sale_date, last_sale_price, property_type,
+                data_tier, data_quality, bedrooms_confirmed, source, last_county_refresh)
+              select county, parcel_id, address_line1, city, state, zip, year_built,
+                     square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_type,
+                     cooling_type, roof_type, roof_material, exterior_type, garage_sf,
+                     basement_finished_sf, basement_unfinished_sf, lot_size_sf,
+                     foundation_type, last_sale_date, last_sale_price, property_type,
+                     data_tier, nullif(data_quality,''), (bedrooms is not null), source,
+                     now()
+                from home_seeds_stage
+               where stage_id > $LO and stage_id <= $HI
+              on conflict (address_normalized, zip, county) do update set
+                square_feet   = excluded.square_feet,
+                parcel_id     = coalesce(excluded.parcel_id,     home_seeds.parcel_id),
+                property_type = coalesce(excluded.property_type, home_seeds.property_type),
+                cooling_type  = coalesce(excluded.cooling_type,  home_seeds.cooling_type),
+                roof_material = coalesce(excluded.roof_material, home_seeds.roof_material),
+                lot_size_sf   = coalesce(excluded.lot_size_sf,   home_seeds.lot_size_sf),
+                last_sale_date  = coalesce(excluded.last_sale_date,  home_seeds.last_sale_date),
+                last_sale_price = coalesce(excluded.last_sale_price, home_seeds.last_sale_price),
+                foundation_type = coalesce(excluded.foundation_type, home_seeds.foundation_type),
+                data_tier     = excluded.data_tier,
+                data_quality  = excluded.data_quality,
+                last_county_refresh = now()
+              where home_seeds.claimed = false
+              returning 1
+            )
+            select count(*) from ins;
+            ") || exit 1
+            echo "  stage_id ($LO, $HI]: $N rows upserted"
+            LO=$HI
+          done
+          echo "Batched upsert complete."
 
       # 11 — Section 8 STEP 3: claimed rows get a fresh timestamp only.
       # Verbatim from migration 055 Section 8.
