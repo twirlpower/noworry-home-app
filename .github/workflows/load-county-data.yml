@@ -94,6 +94,15 @@ jobs:
             exit 1
           fi
 
+      # 5b — diagnostic only: how many staged rows carry an out-of-range
+      # bathrooms/stories value (> 99.9). These no longer break the load now
+      # that both tables are numeric(5,1), but the counts are worth surfacing
+      # as a data-quality signal. NEVER fails the workflow (|| true).
+      - name: Diagnostic - over-range bathrooms/stories
+        run: |
+          psql "$PGURI" -c "SELECT count(*) as over_range_bathrooms FROM home_seeds_stage WHERE bathrooms > 99.9;" || true
+          psql "$PGURI" -c "SELECT count(*) as over_range_stories FROM home_seeds_stage WHERE stories > 99.9;" || true
+
       # 6 — parity check: the SQL normalizer must agree with the CSV's
       # precomputed address_normalized_csv, or the upsert would insert
       # duplicates instead of matching. Expect 0; print a sample and fail if not.
