@@ -84,6 +84,32 @@ jobs:
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "truncate home_seeds_stage;" || exit 1
           psql "$PGURI" -v ON_ERROR_STOP=1 -c "\copy home_seeds_stage (county,parcel_id,address_line1,city,state,zip,year_built,square_feet,bedrooms,bathrooms,stories,hvac_type,cooling_type,roof_type,roof_material,exterior_type,garage_sf,basement_finished_sf,basement_unfinished_sf,lot_size_sf,foundation_type,last_sale_date,last_sale_price,property_type,data_tier,address_normalized_csv,data_quality,source) from 'county.csv' csv header" || exit 1
 
+      # 4b — dedupe intra-CSV duplicate keys before the upsert. The extract can
+      # ship two assessor parcels whose raw addresses normalize to the same
+      # (address_normalized_csv, zip, county) key (e.g. "# 107" vs "APT 107").
+      # ON CONFLICT DO UPDATE cannot affect one target row from two source rows,
+      # so collapse to the most-complete row per key here. psql prints "DELETE n"
+      # (the rows removed). Idempotent: a clean CSV deletes 0 rows and passes.
+      - name: Dedupe duplicate normalized keys in staging
+        run: |
+          echo "Removing intra-CSV duplicate keys (keeping the most-complete row per key):"
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          delete from home_seeds_stage s
+          using (
+            select ctid,
+                   row_number() over (
+                     partition by address_normalized_csv, zip, county
+                     order by ( (bedrooms is not null)::int + (bathrooms is not null)::int
+                              + (square_feet is not null)::int + (year_built is not null)::int
+                              + (property_type is not null)::int ) desc,
+                              year_built desc nulls last,
+                              parcel_id
+                   ) as rn
+              from home_seeds_stage
+          ) r
+          where s.ctid = r.ctid and r.rn > 1;
+          " || exit 1
+
       # 5 — guard against a truncated/partial CSV before doing anything else.
       - name: Guard - staging row count
         run: |
