@@ -36,10 +36,13 @@ jobs:
   load:
     runs-on: ubuntu-latest
     env:
-      # Session-scoped connection. Region + port are pinned per the import
-      # runbook (us-west-1 pooler, 6543). Password and project ref come from
-      # repo secrets — GitHub masks secret values in all logs automatically.
-      PGURI: "postgresql://postgres.${{ secrets.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
+      # Direct database connection (not the pooler): plain postgres user,
+      # port 5432, TLS required. Password comes from a repo secret — GitHub
+      # masks secret values in all logs automatically. NOTE: db.<ref>.supabase.co
+      # is IPv6-only unless the project has the dedicated-IPv4 add-on, and
+      # GitHub-hosted runners are IPv4-only — so this host may be unreachable
+      # from Actions. If a step fails to connect, this is the first thing to check.
+      PGURI: "postgresql://postgres:${{ secrets.SUPABASE_DB_PASSWORD }}@db.hyqurxvuxhwjeqxchuuz.supabase.co:5432/postgres?sslmode=require"
 
     steps:
       # 1 — psql client
