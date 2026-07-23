@@ -1,0 +1,252 @@
+name: Load county data into home_seeds
+
+# Manually-triggered import: downloads a county CSV from the Supabase
+# `county-data` storage bucket, loads it into the pre-existing
+# home_seeds_stage table, verifies the address normalizer agrees, then runs
+# migration 055 Section 8 (log claimed changes -> upsert unclaimed -> bump
+# claimed timestamps -> refresh zip_refresh_status).
+#
+# The Section 8 SQL below is copied verbatim from
+# migrations/055_home_seeds_formalize_and_expand.sql (Section 8 runbook).
+# Do not paraphrase it here — the migration file is the source of truth.
+
+on:
+  workflow_dispatch:
+    inputs:
+      csv_filename:
+        description: 'Filename in the county-data storage bucket'
+        required: false
+        default: 'combined_residential_v2.csv'
+        type: string
+      dry_run:
+        description: 'Parity check only — download, load, verify; no upsert'
+        required: false
+        default: false
+        type: boolean
+
+# Never let two imports race on the shared (TRUNCATEd) staging table.
+concurrency:
+  group: load-county-data
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    env:
+      # Session-scoped connection. Region + port are pinned per the import
+      # runbook (us-west-1 pooler, 6543). Password and project ref come from
+      # repo secrets — GitHub masks secret values in all logs automatically.
+      PGURI: "postgresql://postgres.${{ secrets.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
+
+    steps:
+      # 1 — psql client
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql --version
+
+      # 2 — download the CSV from Supabase Storage (service role, HTTPS).
+      # curl --fail turns any 4xx/5xx into a non-zero exit instead of writing
+      # the error body into county.csv. csv_filename is passed via env, not
+      # interpolated into the script, to avoid shell injection.
+      - name: Download CSV from Supabase Storage
+        env:
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CSV_FILENAME: ${{ inputs.csv_filename }}
+        run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -o county.csv \
+            "${SUPABASE_URL}/storage/v1/object/county-data/${CSV_FILENAME}" || exit 1
+
+      # 3 — the download exists and is non-empty, or fail loudly.
+      - name: Verify downloaded file
+        run: |
+          if [ ! -s county.csv ]; then
+            echo "::error::Downloaded CSV is missing or empty. Aborting."
+            exit 1
+          fi
+          echo "Downloaded $(wc -c < county.csv) bytes / $(wc -l < county.csv) lines."
+
+      # 4 — TRUNCATE + \copy into the pre-existing staging table. The staging
+      # table is unlogged but PERSISTENT, so truncate first to keep re-runs
+      # idempotent. Column list matches the Section 8 runbook exactly.
+      - name: Load CSV into home_seeds_stage
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "truncate home_seeds_stage;" || exit 1
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "\copy home_seeds_stage (county,parcel_id,address_line1,city,state,zip,year_built,square_feet,bedrooms,bathrooms,stories,hvac_type,cooling_type,roof_type,roof_material,exterior_type,garage_sf,basement_finished_sf,basement_unfinished_sf,lot_size_sf,foundation_type,last_sale_date,last_sale_price,property_type,data_tier,address_normalized_csv,data_quality,source) from 'county.csv' csv header" || exit 1
+
+      # 5 — guard against a truncated/partial CSV before doing anything else.
+      - name: Guard - staging row count
+        run: |
+          COUNT=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "select count(*) from home_seeds_stage") || exit 1
+          echo "Staging row count: $COUNT"
+          if [ "$COUNT" -lt 1000000 ]; then
+            echo "::error::Staging table has fewer rows than expected — CSV may be incomplete or truncated. Aborting."
+            exit 1
+          fi
+
+      # 6 — parity check: the SQL normalizer must agree with the CSV's
+      # precomputed address_normalized_csv, or the upsert would insert
+      # duplicates instead of matching. Expect 0; print a sample and fail if not.
+      - name: Parity check (normalizer agreement)
+        run: |
+          MISMATCH=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "select count(*) from home_seeds_stage where public.normalize_seed_address(address_line1) is distinct from address_normalized_csv") || exit 1
+          echo "Normalizer mismatches: $MISMATCH"
+          if [ "$MISMATCH" != "0" ]; then
+            echo "::error::Parity check failed: $MISMATCH rows where normalize_seed_address(address_line1) != address_normalized_csv. Aborting before upsert. Sample below:"
+            psql "$PGURI" -v ON_ERROR_STOP=1 -c "select address_line1, address_normalized_csv, public.normalize_seed_address(address_line1) as sql_fn from home_seeds_stage where public.normalize_seed_address(address_line1) is distinct from address_normalized_csv limit 50" || exit 1
+            exit 1
+          fi
+
+      # 7 — record home_seeds count BEFORE the upsert (runs on dry-run too, so
+      # the final report always has a baseline).
+      - name: Record home_seeds count (before)
+        run: |
+          BEFORE=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "select count(*) from public.home_seeds") || exit 1
+          echo "HOME_SEEDS_BEFORE=$BEFORE" >> "$GITHUB_ENV"
+          echo "home_seeds before import: $BEFORE"
+
+      # 8 — dry run stops here, reporting success.
+      - name: Dry run complete
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "Dry run: CSV downloaded, staged, and parity check passed."
+          echo "No upsert performed. Re-run with dry_run = false to import."
+
+      # 9 — Section 8 STEP 1: log what WOULD change on CLAIMED rows (diff only).
+      # Must run before Step 3. Verbatim from migration 055 Section 8.
+      - name: 'Section 8 Step 1 - log claimed row changes'
+        if: ${{ !inputs.dry_run }}
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          insert into public.home_seeds_update_log
+            (home_seed_id, home_id, column_name, old_value, new_value, county_refresh_date)
+          select hs.id, hm.id, d.column_name, d.old_value, d.new_value, now()
+            from public.home_seeds hs
+            join home_seeds_stage s
+              on  s.address_normalized_csv = hs.address_normalized
+              and s.zip    = hs.zip
+              and s.county = hs.county
+            left join public.homes hm on hm.home_seed_id = hs.id
+           cross join lateral (values
+              ('year_built',             hs.year_built::text,             s.year_built::text),
+              ('square_feet',            hs.square_feet::text,            s.square_feet::text),
+              ('bedrooms',               hs.bedrooms::text,               s.bedrooms::text),
+              ('bathrooms',              hs.bathrooms::text,              s.bathrooms::text),
+              ('stories',                hs.stories::text,                s.stories::text),
+              ('hvac_type',              hs.hvac_type,                    s.hvac_type),
+              ('cooling_type',           hs.cooling_type,                 s.cooling_type),
+              ('roof_type',              hs.roof_type,                    s.roof_type),
+              ('roof_material',          hs.roof_material,                s.roof_material),
+              ('exterior_type',          hs.exterior_type,                s.exterior_type),
+              ('garage_sf',              hs.garage_sf::text,              s.garage_sf::text),
+              ('basement_finished_sf',   hs.basement_finished_sf::text,   s.basement_finished_sf::text),
+              ('basement_unfinished_sf', hs.basement_unfinished_sf::text, s.basement_unfinished_sf::text),
+              ('lot_size_sf',            hs.lot_size_sf::text,            s.lot_size_sf::text),
+              ('foundation_type',        hs.foundation_type,              s.foundation_type),
+              ('last_sale_date',         hs.last_sale_date::text,         s.last_sale_date::text),
+              ('last_sale_price',        hs.last_sale_price::text,        s.last_sale_price::text),
+              ('property_type',          hs.property_type,                s.property_type)
+           ) as d(column_name, old_value, new_value)
+           where hs.claimed = true
+             and d.new_value is not null
+             and d.new_value is distinct from d.old_value;
+          " || exit 1
+
+      # 10 — Section 8 STEP 2: upsert UNCLAIMED + insert brand-new. The WHERE
+      # belongs to DO UPDATE and gates on the EXISTING row's claimed flag.
+      # Verbatim from migration 055 Section 8.
+      - name: 'Section 8 Step 2 - upsert unclaimed + insert new'
+        if: ${{ !inputs.dry_run }}
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          insert into public.home_seeds (
+            county, parcel_id, address_line1, city, state, zip, year_built,
+            square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_heat_type,
+            cooling_type, roof_type, roof_material, exterior_type, garage_sf,
+            basement_finished_sf, basement_unfinished_sf, lot_size_sf,
+            foundation_type, last_sale_date, last_sale_price, property_type,
+            data_tier, data_quality, bedrooms_confirmed, source, last_county_refresh)
+          select county, parcel_id, address_line1, city, state, zip, year_built,
+                 square_feet, bedrooms, bathrooms, stories, hvac_type, hvac_type,
+                 cooling_type, roof_type, roof_material, exterior_type, garage_sf,
+                 basement_finished_sf, basement_unfinished_sf, lot_size_sf,
+                 foundation_type, last_sale_date, last_sale_price, property_type,
+                 data_tier, nullif(data_quality,''), (bedrooms is not null), source,
+                 now()
+            from home_seeds_stage
+          on conflict (address_normalized, zip, county) do update set
+            -- square_feet IS overwritten on purpose. See note 5.
+            square_feet   = excluded.square_feet,
+            parcel_id     = coalesce(excluded.parcel_id,     home_seeds.parcel_id),
+            property_type = coalesce(excluded.property_type, home_seeds.property_type),
+            cooling_type  = coalesce(excluded.cooling_type,  home_seeds.cooling_type),
+            roof_material = coalesce(excluded.roof_material, home_seeds.roof_material),
+            lot_size_sf   = coalesce(excluded.lot_size_sf,   home_seeds.lot_size_sf),
+            last_sale_date  = coalesce(excluded.last_sale_date,  home_seeds.last_sale_date),
+            last_sale_price = coalesce(excluded.last_sale_price, home_seeds.last_sale_price),
+            foundation_type = coalesce(excluded.foundation_type, home_seeds.foundation_type),
+            data_tier     = excluded.data_tier,
+            data_quality  = excluded.data_quality,
+            last_county_refresh = now()
+          where home_seeds.claimed = false;
+          " || exit 1
+
+      # 11 — Section 8 STEP 3: claimed rows get a fresh timestamp only.
+      # Verbatim from migration 055 Section 8.
+      - name: 'Section 8 Step 3 - bump claimed timestamps'
+        if: ${{ !inputs.dry_run }}
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          update public.home_seeds hs
+             set last_county_refresh = now()
+            from home_seeds_stage s
+           where s.address_normalized_csv = hs.address_normalized
+             and s.zip    = hs.zip
+             and s.county = hs.county
+             and hs.claimed = true;
+          " || exit 1
+
+      # 12 — sanity check: claimed/unclaimed split + pending review count.
+      - name: Sanity check
+        if: ${{ !inputs.dry_run }}
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "select claimed, count(*), count(last_county_refresh) as stamped from public.home_seeds group by claimed;" || exit 1
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "select count(*) as pending_reviews from public.home_seeds_update_log where homeowner_accepted is null;" || exit 1
+
+      # 13 — Section 8 FINAL STEP: refresh zip_refresh_status. Verbatim.
+      - name: 'Section 8 Final - refresh zip_refresh_status'
+        if: ${{ !inputs.dry_run }}
+        run: |
+          psql "$PGURI" -v ON_ERROR_STOP=1 -c "
+          insert into public.zip_refresh_status (zip, city, state, property_count)
+          select hs.zip,
+                 mode() within group (order by hs.city)  as city,
+                 mode() within group (order by hs.state) as state,
+                 count(*)::int                            as property_count
+            from public.home_seeds hs
+           where hs.zip is not null and hs.zip <> ''
+           group by hs.zip
+          on conflict (zip) do update
+            set city           = coalesce(zip_refresh_status.city, excluded.city),
+                state          = coalesce(zip_refresh_status.state, excluded.state),
+                property_count = excluded.property_count,
+                updated_at     = now();
+          " || exit 1
+
+      # 14 — before/after row counts on home_seeds (always runs).
+      - name: Report before/after row counts
+        run: |
+          AFTER=$(psql "$PGURI" -v ON_ERROR_STOP=1 -tAc "select count(*) from public.home_seeds") || exit 1
+          echo "home_seeds before: ${HOME_SEEDS_BEFORE}"
+          echo "home_seeds after:  ${AFTER}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "(dry run — no rows changed)"
+          fi
